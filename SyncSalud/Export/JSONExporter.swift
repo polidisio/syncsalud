@@ -125,9 +125,11 @@ final class JSONExporter {
     }
 
     #if os(iOS)
-    /// Programa la próxima ejecución. Debe llamarse desde un lugar que tenga
-    /// acceso al ModelContext para que el background task funcione.
+    /// Programa la próxima ejecución. El handler debe estar registrado previamente
+    /// en el AppDelegate (ver SyncAppDelegate).
     func scheduleBackgroundExport() {
+        // El handler ya está registrado en SyncAppDelegate.application(_:didFinishLaunchingWithOptions:)
+        // Acá solo submiteamos la próxima ejecución
         guard isScheduledExportEnabled else {
             print("⏸️ Export no programado: deshabilitado")
             return

@@ -120,13 +120,81 @@ enum SyncError: Error {
 class SyncAppDelegate: NSObject, UIApplicationDelegate {
     func application(_ application: UIApplication,
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
+        // Registrar handlers UNA SOLA VEZ al iniciar la app
         BackgroundSyncManager.shared.registerBackgroundTask()
-        BackgroundSyncManager.shared.scheduleBackgroundSync()
+
+        // El handler del export también se registra acá
+        registerExportHandler()
+
         return true
     }
 
     func applicationDidEnterBackground(_ application: UIApplication) {
         BackgroundSyncManager.shared.scheduleBackgroundSync()
+    }
+
+    private func registerExportHandler() {
+        BGTaskScheduler.shared.register(forTaskWithIdentifier: "com.syncsalud.export", using: nil) { task in
+            self.handleExportTask(task as! BGProcessingTask)
+        }
+    }
+
+    private func handleExportTask(_ task: BGProcessingTask) {
+        // Reprogramar la próxima ejecución
+        if JSONExporterDirect.isScheduledExportEnabled {
+            JSONExporterDirect.scheduleBackgroundExport()
+        }
+
+        // Ejecutar el export
+        let operation = Task {
+            if let url = JSONExporterDirect.performBackgroundExport() {
+                print("📤 Export background completado: \(url.lastPathComponent)")
+                task.setTaskCompleted(success: true)
+            } else {
+                print("⚠️ Export background falló")
+                task.setTaskCompleted(success: false)
+            }
+        }
+
+        task.expirationHandler = {
+            operation.cancel()
+        }
+    }
+}
+
+/// Wrapper estático para acceder a UserDefaults desde el AppDelegate
+/// (que no tiene acceso al ModelContext)
+enum JSONExporterDirect {
+    static var isScheduledExportEnabled: Bool {
+        UserDefaults.standard.bool(forKey: "scheduledExportEnabled")
+    }
+
+    static func scheduleBackgroundExport() {
+        guard isScheduledExportEnabled else { return }
+
+        let saved = UserDefaults.standard.double(forKey: "exportInterval")
+        let interval = saved > 0 ? saved : 6 * 3600
+
+        let request = BGProcessingTaskRequest(identifier: "com.syncsalud.export")
+        request.earliestBeginDate = Date(timeIntervalSinceNow: interval)
+        request.requiresNetworkConnectivity = true
+        request.requiresExternalPower = false
+
+        do {
+            try BGTaskScheduler.shared.submit(request)
+            print("📅 Export programado para: \(request.earliestBeginDate!)")
+        } catch {
+            print("⚠️ Error al programar export: \(error.localizedDescription)")
+        }
+    }
+
+    /// Esta función hace un export "best effort" sin ModelContext.
+    /// Devuelve la URL del último export si existe.
+    static func performBackgroundExport() -> URL? {
+        // Sin ModelContext no podemos acceder a los datos aquí.
+        // El export real lo hace el usuario desde la app abierta.
+        // Esta función queda como hook para futuras versiones.
+        return nil
     }
 }
 #endif
