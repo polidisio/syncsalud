@@ -19,6 +19,23 @@ struct SettingsView: View {
     @State private var syncFromDate = Calendar.current.date(byAdding: .month, value: -1, to: Date()) ?? Date()
     @State private var syncToDate = Date()
 
+    // Auto export
+    @State private var autoExportEnabled: Bool = false
+    @State private var exportIntervalHours: Double = 6
+
+    // Share sheet
+    @State private var shareItem: ShareItem?
+    @State private var showShareSheet: Bool = false
+
+    private var exporter: JSONExporter { JSONExporter(context: modelContext) }
+
+    // MARK: - Share Sheet Types (defined here so they're visible to the State vars above)
+
+    struct ShareItem: Identifiable {
+        let id = UUID()
+        let url: URL
+    }
+
     @ViewBuilder
     private var healthStatusView: some View {
         switch healthService.authorizationState {
@@ -185,20 +202,64 @@ struct SettingsView: View {
                 // MARK: - Exportación
                 Section {
                     Button {
-                        exportJSON()
+                        exportAndShare()
                     } label: {
                         HStack {
                             Image(systemName: "square.and.arrow.up")
-                            Text("Exportar todos los datos a JSON")
+                            Text("Exportar y compartir JSON")
                         }
                     }
 
-                    Text("El archivo se guarda en Documents/ y podés compartirlo desde la app Archivos.")
+                    Button {
+                        exportToiCloudDrive()
+                    } label: {
+                        HStack {
+                            Image(systemName: "icloud.and.arrow.up")
+                            Text("Exportar a iCloud Drive")
+                        }
+                    }
+
+                    Text("• Compartir: AirDrop, Mail, Files, etc.\n• iCloud Drive: queda disponible en todos tus dispositivos Apple")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 } header: {
                     Text("Exportar")
                 }
+
+                // MARK: - Exportación automática (iOS)
+                #if os(iOS)
+                Section {
+                    Toggle("Exportar automáticamente", isOn: $autoExportEnabled)
+                        .onChange(of: autoExportEnabled) { _, newValue in
+                            if newValue {
+                                exporter.enableScheduledExport(interval: exportIntervalHours * 3600)
+                            } else {
+                                exporter.disableScheduledExport()
+                            }
+                        }
+
+                    if autoExportEnabled {
+                        VStack(alignment: .leading) {
+                            HStack {
+                                Text("Intervalo")
+                                Spacer()
+                                Text("\(Int(exportIntervalHours))h")
+                                    .foregroundStyle(.secondary)
+                            }
+                            Slider(value: $exportIntervalHours, in: 1...24, step: 1)
+                                .onChange(of: exportIntervalHours) { _, newValue in
+                                    exporter.scheduledExportInterval = newValue * 3600
+                                }
+                        }
+
+                        Text("El archivo se guarda automáticamente en iCloud Drive → SyncSalud/")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                } header: {
+                    Text("Exportación automática")
+                }
+                #endif
 
                 // MARK: - API Local (macOS)
                 #if os(macOS)
@@ -271,7 +332,7 @@ struct SettingsView: View {
             .alert("Exportación exitosa", isPresented: $showExportSuccess) {
                 Button("OK", role: .cancel) { }
             } message: {
-                Text("Archivo guardado en Documents/")
+                Text("Archivo guardado correctamente")
             }
             .alert("Error de exportación", isPresented: .constant(exportError != nil)) {
                 Button("OK", role: .cancel) { exportError = nil }
@@ -280,6 +341,11 @@ struct SettingsView: View {
                     Text(error)
                 }
             }
+            #if os(iOS)
+            .sheet(item: $shareItem) { item in
+                ShareSheet(items: [item.url])
+            }
+            #endif
         }
     }
 
@@ -292,7 +358,43 @@ struct SettingsView: View {
             exportError = exporter.lastExportError ?? "Error desconocido"
         }
     }
+
+    private func exportAndShare() {
+        if let url = exporter.exportToJSON() {
+            #if os(iOS)
+            shareItem = ShareItem(url: url)
+            showShareSheet = true
+            #else
+            showExportSuccess = true
+            #endif
+        } else {
+            exportError = exporter.lastExportError ?? "Error desconocido"
+        }
+    }
+
+    private func exportToiCloudDrive() {
+        if let url = exporter.exportToiCloudDrive() {
+            showExportSuccess = true
+            print("✅ iCloud Drive: \(url.path)")
+        } else {
+            exportError = exporter.lastExportError ?? "Error desconocido"
+        }
+    }
 }
+
+// MARK: - Share Sheet (iOS)
+
+#if os(iOS)
+struct ShareSheet: UIViewControllerRepresentable {
+    let items: [Any]
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: items, applicationActivities: nil)
+    }
+
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
+}
+#endif
 
 #Preview {
     SettingsView()
