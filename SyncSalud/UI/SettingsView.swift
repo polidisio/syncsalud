@@ -26,8 +26,7 @@ struct SettingsView: View {
     // Share sheet
     @State private var shareItem: ShareItem?
     @State private var showShareSheet: Bool = false
-
-    private var exporter: JSONExporter { JSONExporter(context: modelContext) }
+    @State private var autoExportInitialized: Bool = false
 
     // MARK: - Share Sheet Types (defined here so they're visible to the State vars above)
 
@@ -231,11 +230,12 @@ struct SettingsView: View {
                 Section {
                     Toggle("Exportar automáticamente", isOn: $autoExportEnabled)
                         .onChange(of: autoExportEnabled) { _, newValue in
+                            let exp = JSONExporter(context: modelContext)
                             if newValue {
-                                exporter.enableScheduledExport(interval: exportIntervalHours * 3600)
-                                exporter.scheduleBackgroundExport()
+                                exp.enableScheduledExport(interval: exportIntervalHours * 3600)
+                                exp.scheduleBackgroundExport()
                             } else {
-                                exporter.disableScheduledExport()
+                                exp.disableScheduledExport()
                             }
                         }
 
@@ -249,8 +249,9 @@ struct SettingsView: View {
                             }
                             Slider(value: $exportIntervalHours, in: 1...24, step: 1)
                                 .onChange(of: exportIntervalHours) { _, newValue in
-                                    exporter.scheduledExportInterval = newValue * 3600
-                                    exporter.scheduleBackgroundExport()
+                                    let exp = JSONExporter(context: modelContext)
+                                    exp.scheduledExportInterval = newValue * 3600
+                                    exp.scheduleBackgroundExport()
                                 }
                         }
 
@@ -332,15 +333,13 @@ struct SettingsView: View {
             }
             .navigationTitle("Ajustes")
             .onAppear {
-                // Inicializar estado del toggle desde UserDefaults
-                if autoExportEnabled == false && JSONExporter(context: modelContext).isScheduledExportEnabled {
-                    autoExportEnabled = true
-                }
-                if exportIntervalHours == 6 {
+                if !autoExportInitialized {
+                    autoExportEnabled = UserDefaults.standard.bool(forKey: "scheduledExportEnabled")
                     let saved = UserDefaults.standard.double(forKey: "exportInterval")
                     if saved > 0 {
                         exportIntervalHours = saved / 3600
                     }
+                    autoExportInitialized = true
                 }
             }
             .alert("Exportación exitosa", isPresented: $showExportSuccess) {
@@ -374,6 +373,7 @@ struct SettingsView: View {
     }
 
     private func exportAndShare() {
+        let exporter = JSONExporter(context: modelContext)
         if let url = exporter.exportToJSON() {
             #if os(iOS)
             shareItem = ShareItem(url: url)
@@ -387,6 +387,7 @@ struct SettingsView: View {
     }
 
     private func exportToiCloudDrive() {
+        let exporter = JSONExporter(context: modelContext)
         if let url = exporter.exportToiCloudDrive() {
             showExportSuccess = true
             print("✅ iCloud Drive: \(url.path)")
