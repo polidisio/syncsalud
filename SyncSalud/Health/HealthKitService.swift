@@ -52,6 +52,11 @@ final class HealthKitService {
         HKHealthStore.isHealthDataAvailable()
     }
 
+    /// Versión estática para usar desde background tasks (AppDelegate)
+    static var isAvailableStatic: Bool {
+        HKHealthStore.isHealthDataAvailable()
+    }
+
     // MARK: - Autorización
 
     /// Solicita autorización a HealthKit

@@ -1,4 +1,5 @@
 import Foundation
+import SwiftData
 #if os(iOS)
 import BackgroundTasks
 import UIKit
@@ -73,19 +74,21 @@ final class BackgroundSyncManager {
     }
 
     private func handleBackgroundTask(_ task: BGProcessingTask) {
+        // Reprogramar la próxima ejecución
         scheduleBackgroundSync()
 
+        // En background no podemos crear un HealthSyncManager fresco sin modelContext.
+        // Solo marcamos que la app debería sincronizar al próximo abrir.
+        // El sync real ocurre al abrir la app por setupApp() en SyncSaludApp.
+
+        // Hacer un sync "best effort" si hay datos en disco
         let operation = Task {
             do {
-                let syncManager = HealthSyncManager()
-                await syncManager.syncFromHealthKit()
-
-                if let error = syncManager.lastError {
-                    throw SyncError.syncFailed(error)
-                }
-
-                task.setTaskCompleted(success: true)
+                // Intentar un sync rápido sin acceso a UI
+                let success = await BackgroundSyncHelper.performQuickSync()
+                task.setTaskCompleted(success: success)
             } catch {
+                print("⚠️ Background sync falló: \(error.localizedDescription)")
                 task.setTaskCompleted(success: false)
             }
         }
@@ -110,6 +113,48 @@ enum SyncError: Error {
         switch self {
         case .syncFailed(let msg): return "Sync falló: \(msg)"
         case .healthKitNotAuthorized: return "HealthKit no autorizado"
+        }
+    }
+}
+
+// MARK: - Background Sync Helper
+
+/// Helper que ejecuta un sync "best effort" desde background.
+/// Accede a la base de datos SwiftData local sin pasar por UI.
+enum BackgroundSyncHelper {
+    /// Realiza un sync rápido sin interacción de UI.
+    /// - Returns: true si el sync fue exitoso
+    static func performQuickSync() async -> Bool {
+        // En background, no podemos pedir permisos de HealthKit ni mostrar UI
+        // Solo verificamos que ya estén autorizados y leemos los nuevos workouts
+        guard HealthKitService.isAvailableStatic else {
+            print("⏸️ Background sync: HealthKit no disponible")
+            return false
+        }
+
+        // Crear un container SwiftData independiente (background)
+        do {
+            let schema = Schema([WorkoutRecord.self, WorkoutMetric.self, SyncLog.self])
+            let config = ModelConfiguration(
+                cloudKitDatabase: .private("iCloud.com.saraiba.syncsalud.app")
+            )
+            let container = try ModelContainer(for: schema, configurations: config)
+            let context = ModelContext(container)
+
+            let syncManager = HealthSyncManager()
+            syncManager.configure(with: context)
+            await syncManager.syncFromHealthKit(force: false)
+
+            if let error = syncManager.lastError {
+                print("⚠️ Background sync error: \(error)")
+                return false
+            }
+
+            print("✅ Background sync completado: \(syncManager.lastSyncCount) workouts")
+            return true
+        } catch {
+            print("❌ Background sync: error al crear container: \(error.localizedDescription)")
+            return false
         }
     }
 }
