@@ -233,6 +233,7 @@ struct SettingsView: View {
                         .onChange(of: autoExportEnabled) { _, newValue in
                             if newValue {
                                 exporter.enableScheduledExport(interval: exportIntervalHours * 3600)
+                                exporter.scheduleBackgroundExport()
                             } else {
                                 exporter.disableScheduledExport()
                             }
@@ -249,6 +250,7 @@ struct SettingsView: View {
                             Slider(value: $exportIntervalHours, in: 1...24, step: 1)
                                 .onChange(of: exportIntervalHours) { _, newValue in
                                     exporter.scheduledExportInterval = newValue * 3600
+                                    exporter.scheduleBackgroundExport()
                                 }
                         }
 
@@ -329,6 +331,18 @@ struct SettingsView: View {
                 }
             }
             .navigationTitle("Ajustes")
+            .onAppear {
+                // Inicializar estado del toggle desde UserDefaults
+                if autoExportEnabled == false && JSONExporter(context: modelContext).isScheduledExportEnabled {
+                    autoExportEnabled = true
+                }
+                if exportIntervalHours == 6 {
+                    let saved = UserDefaults.standard.double(forKey: "exportInterval")
+                    if saved > 0 {
+                        exportIntervalHours = saved / 3600
+                    }
+                }
+            }
             .alert("Exportación exitosa", isPresented: $showExportSuccess) {
                 Button("OK", role: .cancel) { }
             } message: {

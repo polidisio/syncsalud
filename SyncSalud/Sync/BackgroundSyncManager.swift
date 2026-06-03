@@ -122,29 +122,11 @@ class SyncAppDelegate: NSObject, UIApplicationDelegate {
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         BackgroundSyncManager.shared.registerBackgroundTask()
         BackgroundSyncManager.shared.scheduleBackgroundSync()
-
-        // Registrar export en background también
-        if let exporter = sharedExporter {
-            exporter.registerBackgroundExport()
-            if exporter.isScheduledExportEnabled {
-                exporter.scheduleBackgroundExport()
-            }
-        }
-
         return true
     }
 
     func applicationDidEnterBackground(_ application: UIApplication) {
         BackgroundSyncManager.shared.scheduleBackgroundSync()
-        if let exporter = sharedExporter, exporter.isScheduledExportEnabled {
-            exporter.scheduleBackgroundExport()
-        }
-    }
-
-    private var sharedExporter: JSONExporter? {
-        // El AppDelegate no tiene acceso al ModelContext directamente
-        // El JSONExporter se configura desde SettingsView
-        nil
     }
 }
 #endif

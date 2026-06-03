@@ -65,6 +65,21 @@ struct SyncSaludApp: App {
             #if os(macOS)
             LocalAPIServer.shared.start()
             #endif
+
+            // 4. Configurar export automático a iCloud Drive si está habilitado (iOS)
+            #if os(iOS)
+            await setupScheduledExportIfNeeded()
+            #endif
         }
     }
+
+    #if os(iOS)
+    @MainActor
+    private func setupScheduledExportIfNeeded() async {
+        // El ModelContext se obtiene a través de syncManager que ya lo tiene
+        // (necesitamos una referencia directa al contexto aquí)
+        // Por ahora el export se programa desde SettingsView cuando el usuario lo activa
+        // Esta función queda como hook futuro
+    }
+    #endif
 }

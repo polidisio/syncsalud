@@ -95,13 +95,16 @@ final class JSONExporter {
     func enableScheduledExport(interval: TimeInterval = 6 * 3600) {
         UserDefaults.standard.set(interval, forKey: "exportInterval")
         UserDefaults.standard.set(true, forKey: "scheduledExportEnabled")
+        print("✅ Export automático habilitado (intervalo: \(Int(interval/3600))h)")
         #if os(iOS)
-        scheduleBackgroundExport()
+        // NO programar inmediatamente — esperar a que se llame a scheduleBackgroundExport()
+        // desde el lugar que tiene acceso al modelContext
         #endif
     }
 
     func disableScheduledExport() {
         UserDefaults.standard.set(false, forKey: "scheduledExportEnabled")
+        print("⏸️ Export automático deshabilitado")
         #if os(iOS)
         BGTaskScheduler.shared.cancel(taskRequestWithIdentifier: "com.syncsalud.export")
         #endif
@@ -122,8 +125,13 @@ final class JSONExporter {
     }
 
     #if os(iOS)
+    /// Programa la próxima ejecución. Debe llamarse desde un lugar que tenga
+    /// acceso al ModelContext para que el background task funcione.
     func scheduleBackgroundExport() {
-        guard isScheduledExportEnabled else { return }
+        guard isScheduledExportEnabled else {
+            print("⏸️ Export no programado: deshabilitado")
+            return
+        }
 
         let request = BGProcessingTaskRequest(identifier: "com.syncsalud.export")
         request.earliestBeginDate = Date(timeIntervalSinceNow: scheduledExportInterval)
@@ -135,30 +143,6 @@ final class JSONExporter {
             print("📅 Export programado para: \(request.earliestBeginDate!)")
         } catch {
             print("⚠️ Error al programar export: \(error.localizedDescription)")
-        }
-    }
-
-    func registerBackgroundExport() {
-        BGTaskScheduler.shared.register(forTaskWithIdentifier: "com.syncsalud.export", using: nil) { task in
-            self.handleBackgroundExport(task as! BGProcessingTask)
-        }
-    }
-
-    private func handleBackgroundExport(_ task: BGProcessingTask) {
-        scheduleBackgroundExport() // programar el próximo
-
-        let operation = Task {
-            if let url = self.exportToiCloudDrive() {
-                print("📤 Export background completado: \(url.lastPathComponent)")
-                task.setTaskCompleted(success: true)
-            } else {
-                print("⚠️ Export background falló")
-                task.setTaskCompleted(success: false)
-            }
-        }
-
-        task.expirationHandler = {
-            operation.cancel()
         }
     }
     #endif
