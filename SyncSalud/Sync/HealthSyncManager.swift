@@ -37,8 +37,12 @@ final class HealthSyncManager {
     // MARK: - Sincronización
 
     /// Sincroniza desde HealthKit: lee workouts nuevos y los guarda en SwiftData
+    /// - Parameters:
+    ///   - force: Si true, ignora el throttle de 5 minutos y el límite de primer año
+    ///   - from: Fecha de inicio del rango a sincronizar (nil = automático)
+    ///   - to: Fecha de fin del rango a sincronizar (nil = ahora)
     @MainActor
-    func syncFromHealthKit(force: Bool = false) async {
+    func syncFromHealthKit(force: Bool = false, from: Date? = nil, to: Date? = nil) async {
         guard !isSyncing else {
             print("⚠️ Sync ya en progreso, ignorando...")
             return
@@ -72,26 +76,38 @@ final class HealthSyncManager {
             return
         }
 
-        // 2. Determinar fecha de inicio
-        // - Si es el primer sync, traer solo el último año (no todo el historial)
-        // - Si ya hicimos el primer sync, traer desde el último sync
+        // 2. Determinar fecha de inicio y fin
+        // Prioridad: parámetros explícitos > lógica automática
         let fromDate: Date?
-        if hasDoneInitialSync, let last = lastCompletedSync {
+        let toDate: Date
+
+        if let explicitFrom = from, let explicitTo = to {
+            // Rango explícito del usuario
+            fromDate = explicitFrom
+            toDate = explicitTo
+        } else if hasDoneInitialSync, let last = lastCompletedSync, !force {
+            // Sync incremental: desde el último sync
             fromDate = last
-        } else if force {
-            fromDate = nil
-        } else {
-            // Primer sync: solo el último año para evitar la explosión inicial
+            toDate = Date()
+        } else if !force {
+            // Primer sync automático: solo el último año
             fromDate = Calendar.current.date(byAdding: .year, value: -1, to: Date())
+            toDate = Date()
+        } else {
+            // Force sync sin rango: todo el historial
+            fromDate = nil
+            toDate = Date()
         }
 
         syncProgress = 0.1
 
         // 3. Limpiar duplicados existentes antes de empezar
-        cleanDuplicates(context: modelContext)
+        if from == nil && to == nil { // solo en sync automático, no en filtro manual
+            cleanDuplicates(context: modelContext)
+        }
 
         // 4. Fetch workouts desde HealthKit
-        let workouts = await healthService.fetchWorkouts(from: fromDate)
+        let workouts = await healthService.fetchWorkouts(from: fromDate, to: toDate)
         syncProgress = 0.3
 
         print("📊 HealthKit devolvió \(workouts.count) workouts desde \(fromDate?.description ?? "inicio")")

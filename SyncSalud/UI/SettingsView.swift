@@ -14,6 +14,11 @@ struct SettingsView: View {
 
     @State private var isAuthorizing = false
 
+    // Date range filter for sync
+    @State private var dateFilterEnabled = false
+    @State private var syncFromDate = Calendar.current.date(byAdding: .month, value: -1, to: Date()) ?? Date()
+    @State private var syncToDate = Date()
+
     @ViewBuilder
     private var healthStatusView: some View {
         switch healthService.authorizationState {
@@ -99,12 +104,19 @@ struct SettingsView: View {
 
                 // MARK: - Sincronización
                 Section {
+                    // Full sync button
                     Button {
-                        Task { await syncManager.syncFromHealthKit() }
+                        Task {
+                            if dateFilterEnabled {
+                                await syncManager.syncFromHealthKit(force: true, from: syncFromDate, to: syncToDate)
+                            } else {
+                                await syncManager.syncFromHealthKit(force: true)
+                            }
+                        }
                     } label: {
                         HStack {
                             Image(systemName: "arrow.clockwise")
-                            Text("Sincronizar ahora")
+                            Text(dateFilterEnabled ? "Sincronizar rango seleccionado" : "Sincronizar ahora (todo)")
                             Spacer()
                             if syncManager.isSyncing {
                                 ProgressView()
@@ -120,6 +132,29 @@ struct SettingsView: View {
                             Text(last, style: .relative)
                                 .foregroundStyle(.secondary)
                         }
+                    }
+
+                    Toggle("Filtrar por rango de fechas", isOn: $dateFilterEnabled)
+
+                    if dateFilterEnabled {
+                        DatePicker(
+                            "Desde",
+                            selection: $syncFromDate,
+                            displayedComponents: [.date]
+                        )
+                        .datePickerStyle(.compact)
+
+                        DatePicker(
+                            "Hasta",
+                            selection: $syncToDate,
+                            in: syncFromDate...Date(),
+                            displayedComponents: [.date]
+                        )
+                        .datePickerStyle(.compact)
+
+                        Text("Se sincronizarán solo los workouts entre las fechas seleccionadas.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                     }
 
                     #if os(iOS)
