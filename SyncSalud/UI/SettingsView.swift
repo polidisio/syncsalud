@@ -231,9 +231,6 @@ struct SettingsView: View {
                 // MARK: - Vault
                 VaultSectionView()
 
-                // MARK: - Automatizaciones
-                AutomationsSection()
-
                 // MARK: - API Local (macOS)
                 #if os(macOS)
                 Section {

@@ -222,11 +222,6 @@ final class VaultManager {
         index.lastRefresh = Date()
         try? saveIndex(index)
 
-        // 4. Dispatch automation plugins (async, no blocking).
-        Task {
-            await AutomationManager.shared.afterVaultRefresh(writtenURLs: writtenURLs)
-        }
-
         return VaultRefreshResult(monthsWritten: written, monthsSkipped: skipped, totalMonths: months.count, iCloudMirrored: isICloudMirroring, writtenURLs: writtenURLs)
     }
 
@@ -254,12 +249,6 @@ final class VaultManager {
         index.months[yearMonth] = VaultMonth(workoutCount: records.count, byteSize: jsonData.count, lastUpdatedAt: latest, recordRange: range)
         index.lastRefresh = Date()
         try? saveIndex(index)
-
-        Task {
-            if let url = readMonth(yearMonth) {
-                await AutomationManager.shared.afterVaultRefresh(writtenURLs: [url])
-            }
-        }
 
         return readMonth(yearMonth)
     }
