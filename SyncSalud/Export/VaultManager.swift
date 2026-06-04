@@ -149,6 +149,7 @@ final class VaultManager {
         var monthsSkipped: [String]
         var totalMonths: Int
         var iCloudMirrored: Bool
+        var writtenURLs: [URL]
     }
 
     /// Recorre todos los meses con datos y reescribe solo los que cambiaron.
@@ -162,12 +163,13 @@ final class VaultManager {
         guard let (fromYearMonth, toYearMonth) = bounds else {
             // No hay datos. Escribir index vacío igualmente.
             try? saveIndex(VaultIndex(lastRefresh: Date(), months: [:]))
-            return VaultRefreshResult(monthsWritten: [], monthsSkipped: [], totalMonths: 0, iCloudMirrored: isICloudMirroring)
+            return VaultRefreshResult(monthsWritten: [], monthsSkipped: [], totalMonths: 0, iCloudMirrored: isICloudMirroring, writtenURLs: [])
         }
 
         var index = loadIndex() ?? .empty()
         var written: [String] = []
         var skipped: [String] = []
+        var writtenURLs: [URL] = []
 
         // 2. Iterar meses en orden cronológico.
         let months = monthRange(from: fromYearMonth, to: toYearMonth)
@@ -210,6 +212,7 @@ final class VaultManager {
                 }
                 index.months[ym] = VaultMonth(workoutCount: count, byteSize: size, lastUpdatedAt: latest, recordRange: range)
                 written.append(ym)
+                if let url = readMonth(ym) { writtenURLs.append(url) }
             } catch {
                 print("Vault: error escribiendo mes \(ym): \(error)")
             }
@@ -219,7 +222,12 @@ final class VaultManager {
         index.lastRefresh = Date()
         try? saveIndex(index)
 
-        return VaultRefreshResult(monthsWritten: written, monthsSkipped: skipped, totalMonths: months.count, iCloudMirrored: isICloudMirroring)
+        // 4. Dispatch automation plugins (async, no blocking).
+        Task {
+            await AutomationManager.shared.afterVaultRefresh(writtenURLs: writtenURLs)
+        }
+
+        return VaultRefreshResult(monthsWritten: written, monthsSkipped: skipped, totalMonths: months.count, iCloudMirrored: isICloudMirroring, writtenURLs: writtenURLs)
     }
 
     /// Fuerza la reescritura de un mes puntual. Devuelve la URL local del snapshot resultante.
@@ -246,6 +254,13 @@ final class VaultManager {
         index.months[yearMonth] = VaultMonth(workoutCount: records.count, byteSize: jsonData.count, lastUpdatedAt: latest, recordRange: range)
         index.lastRefresh = Date()
         try? saveIndex(index)
+
+        Task {
+            if let url = readMonth(yearMonth) {
+                await AutomationManager.shared.afterVaultRefresh(writtenURLs: [url])
+            }
+        }
+
         return readMonth(yearMonth)
     }
 
