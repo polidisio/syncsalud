@@ -16,8 +16,7 @@ final class AutomationManager {
             RESTAPIPlugin(),
             HomeAssistantPlugin(),
             GoogleDrivePlugin(),
-            DropboxPlugin(),
-            ICloudAutomationPlugin()
+            DropboxPlugin()
         ]
     }
 
@@ -88,24 +87,4 @@ final class AutomationManager {
     func isEnabled(pluginId: String) -> Bool {
         UserDefaults.standard.bool(forKey: "plugin_\(pluginId)_enabled")
     }
-}
-
-// MARK: - iCloud plugin (reuses existing VaultManager state)
-
-final class ICloudAutomationPlugin: ExportPlugin {
-    var id: String { "icloud" }
-    var displayName: String { "iCloud Drive" }
-
-    var isEnabled: Bool {
-        get { UserDefaults.standard.bool(forKey: "plugin_icloud_enabled") }
-        set { UserDefaults.standard.set(newValue, forKey: "plugin_icloud_enabled") }
-    }
-
-    var isConfigured: Bool { VaultManager.shared.isICloudMirroring }
-
-    func run(vaultURLs: [URL]) async -> Result<Void, ExportError> {
-        return .success(())
-    }
-
-    func buildConfigView() -> AnyView { AnyView(EmptyView()) }
 }
