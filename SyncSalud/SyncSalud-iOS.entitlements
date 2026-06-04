@@ -13,6 +13,7 @@
     <key>com.apple.developer.icloud-services</key>
     <array>
         <string>CloudKit</string>
+        <string>Documents</string>
     </array>
 </dict>
 </plist>

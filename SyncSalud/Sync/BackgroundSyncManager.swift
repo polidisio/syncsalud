@@ -132,14 +132,8 @@ enum BackgroundSyncHelper {
             return false
         }
 
-        // Crear un container SwiftData independiente (background)
         do {
-            let schema = Schema([WorkoutRecord.self, WorkoutMetric.self, SyncLog.self])
-            let config = ModelConfiguration(
-                cloudKitDatabase: .private("iCloud.com.saraiba.syncsalud.app")
-            )
-            let container = try ModelContainer(for: schema, configurations: config)
-            let context = ModelContext(container)
+            let (container, context) = try VaultManager.makeBackgroundContainer()
 
             let syncManager = HealthSyncManager()
             syncManager.configure(with: context)
@@ -190,13 +184,15 @@ class SyncAppDelegate: NSObject, UIApplicationDelegate {
             JSONExporterDirect.scheduleBackgroundExport()
         }
 
-        // Ejecutar el export
+        // Refrescar el vault: lee SwiftData (container independiente), reescribe solo meses cambiados
         let operation = Task {
-            if let url = JSONExporterDirect.performBackgroundExport() {
-                print("📤 Export background completado: \(url.lastPathComponent)")
+            do {
+                let ctx = try VaultManager.makeBackgroundContainer().context
+                let result = try await VaultManager.shared.refreshAll(modelContext: ctx)
+                print("📤 Vault refresh background: escritos=\(result.monthsWritten.count) skipped=\(result.monthsSkipped.count) iCloud=\(result.iCloudMirrored)")
                 task.setTaskCompleted(success: true)
-            } else {
-                print("⚠️ Export background falló")
+            } catch {
+                print("⚠️ Vault refresh background falló: \(error.localizedDescription)")
                 task.setTaskCompleted(success: false)
             }
         }
@@ -211,7 +207,7 @@ class SyncAppDelegate: NSObject, UIApplicationDelegate {
 /// (que no tiene acceso al ModelContext)
 enum JSONExporterDirect {
     static var isScheduledExportEnabled: Bool {
-        UserDefaults.standard.bool(forKey: "scheduledExportEnabled")
+        UserDefaults.standard.bool(forKey: "scheduledExportEnabled") || UserDefaults.standard.bool(forKey: "vaultEnabled")
     }
 
     static func scheduleBackgroundExport() {
@@ -231,15 +227,6 @@ enum JSONExporterDirect {
         } catch {
             print("⚠️ Error al programar export: \(error.localizedDescription)")
         }
-    }
-
-    /// Esta función hace un export "best effort" sin ModelContext.
-    /// Devuelve la URL del último export si existe.
-    static func performBackgroundExport() -> URL? {
-        // Sin ModelContext no podemos acceder a los datos aquí.
-        // El export real lo hace el usuario desde la app abierta.
-        // Esta función queda como hook para futuras versiones.
-        return nil
     }
 }
 #endif

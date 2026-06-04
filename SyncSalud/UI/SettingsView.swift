@@ -8,7 +8,6 @@ struct SettingsView: View {
 
     @State private var backgroundSyncEnabled: Bool = BackgroundSyncManager.shared.isBackgroundSyncEnabled
     @State private var syncIntervalHours: Double = BackgroundSyncManager.shared.minimumSyncInterval / 3600
-    @State private var showExportSuccess: Bool = false
     @State private var exportError: String?
     @State private var showAPIError: Bool = false
 
@@ -19,14 +18,21 @@ struct SettingsView: View {
     @State private var syncFromDate = Calendar.current.date(byAdding: .month, value: -1, to: Date()) ?? Date()
     @State private var syncToDate = Date()
 
-    // Auto export
-    @State private var autoExportEnabled: Bool = false
-    @State private var exportIntervalHours: Double = 6
-
+    // Auto export — ahora vive dentro de VaultSectionView
     // Share sheet
     @State private var shareItem: ShareItem?
     @State private var showShareSheet: Bool = false
-    @State private var autoExportInitialized: Bool = false
+
+    // Export filter sheet
+    @State private var showExportFilterSheet: Bool = false
+    @State private var exportFromDate: Date = Calendar.current.date(byAdding: .month, value: -1, to: Date()) ?? Date()
+    @State private var exportToDate: Date = Date()
+    @State private var exportUseDateFilter: Bool = false
+    @State private var exportSummaryOnly: Bool = false
+    @State private var selectedWorkoutTypes: Set<String> = []
+
+    // iCloud status
+    @State private var iCloudAvailable: Bool = false
 
     // MARK: - Share Sheet Types (defined here so they're visible to the State vars above)
 
@@ -34,6 +40,9 @@ struct SettingsView: View {
         let id = UUID()
         let url: URL
     }
+
+    // Workout types available for filtering
+    private let workoutTypes = ["running", "cycling", "walking", "swimming", "hiking", "yoga", "other"]
 
     @ViewBuilder
     private var healthStatusView: some View {
@@ -201,68 +210,26 @@ struct SettingsView: View {
                 // MARK: - Exportación
                 Section {
                     Button {
-                        exportAndShare()
+                        showExportFilterSheet = true
                     } label: {
                         HStack {
                             Image(systemName: "square.and.arrow.up")
-                            Text("Exportar y compartir JSON")
+                            Text("Exportar y compartir JSON (ad-hoc)")
+                            Spacer()
+                            Image(systemName: "line.3.horizontal.decrease.circle")
+                                .foregroundStyle(.secondary)
                         }
                     }
 
-                    Button {
-                        exportToiCloudDrive()
-                    } label: {
-                        HStack {
-                            Image(systemName: "icloud.and.arrow.up")
-                            Text("Exportar a iCloud Drive")
-                        }
-                    }
-
-                    Text("• Compartir: AirDrop, Mail, Files, etc.\n• iCloud Drive: queda disponible en todos tus dispositivos Apple")
+                    Text("Para exportar meses o rangos pre-calculados usá el Vault más abajo.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 } header: {
                     Text("Exportar")
                 }
 
-                // MARK: - Exportación automática (iOS)
-                #if os(iOS)
-                Section {
-                    Toggle("Exportar automáticamente", isOn: $autoExportEnabled)
-                        .onChange(of: autoExportEnabled) { _, newValue in
-                            let exp = JSONExporter(context: modelContext)
-                            if newValue {
-                                exp.enableScheduledExport(interval: exportIntervalHours * 3600)
-                                exp.scheduleBackgroundExport()
-                            } else {
-                                exp.disableScheduledExport()
-                            }
-                        }
-
-                    if autoExportEnabled {
-                        VStack(alignment: .leading) {
-                            HStack {
-                                Text("Intervalo")
-                                Spacer()
-                                Text("\(Int(exportIntervalHours))h")
-                                    .foregroundStyle(.secondary)
-                            }
-                            Slider(value: $exportIntervalHours, in: 1...24, step: 1)
-                                .onChange(of: exportIntervalHours) { _, newValue in
-                                    let exp = JSONExporter(context: modelContext)
-                                    exp.scheduledExportInterval = newValue * 3600
-                                    exp.scheduleBackgroundExport()
-                                }
-                        }
-
-                        Text("El archivo se guarda automáticamente en iCloud Drive → SyncSalud/")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                } header: {
-                    Text("Exportación automática")
-                }
-                #endif
+                // MARK: - Vault
+                VaultSectionView()
 
                 // MARK: - API Local (macOS)
                 #if os(macOS)
@@ -333,19 +300,8 @@ struct SettingsView: View {
             }
             .navigationTitle("Ajustes")
             .onAppear {
-                if !autoExportInitialized {
-                    autoExportEnabled = UserDefaults.standard.bool(forKey: "scheduledExportEnabled")
-                    let saved = UserDefaults.standard.double(forKey: "exportInterval")
-                    if saved > 0 {
-                        exportIntervalHours = saved / 3600
-                    }
-                    autoExportInitialized = true
-                }
-            }
-            .alert("Exportación exitosa", isPresented: $showExportSuccess) {
-                Button("OK", role: .cancel) { }
-            } message: {
-                Text("Archivo guardado correctamente")
+                // Check iCloud availability
+                iCloudAvailable = FileManager.default.ubiquityIdentityToken != nil
             }
             .alert("Error de exportación", isPresented: .constant(exportError != nil)) {
                 Button("OK", role: .cancel) { exportError = nil }
@@ -358,44 +314,119 @@ struct SettingsView: View {
             .sheet(item: $shareItem) { item in
                 ShareSheet(items: [item.url])
             }
+            .sheet(isPresented: $showExportFilterSheet) {
+                ExportFilterSheet(
+                    fromDate: $exportFromDate,
+                    toDate: $exportToDate,
+                    useDateFilter: $exportUseDateFilter,
+                    summaryOnly: $exportSummaryOnly,
+                    selectedWorkoutTypes: $selectedWorkoutTypes,
+                    workoutTypes: workoutTypes,
+                    onExport: { filteredURL in
+                        if let url = filteredURL {
+                            shareItem = ShareItem(url: url)
+                            showShareSheet = true
+                        }
+                    }
+                )
+            }
             #endif
-        }
-    }
-
-    private func exportJSON() {
-        let exporter = JSONExporter(context: modelContext)
-        if let url = exporter.exportToJSON() {
-            print("Exportado a: \(url)")
-            showExportSuccess = true
-        } else {
-            exportError = exporter.lastExportError ?? "Error desconocido"
-        }
-    }
-
-    private func exportAndShare() {
-        let exporter = JSONExporter(context: modelContext)
-        if let url = exporter.exportToJSON() {
-            #if os(iOS)
-            shareItem = ShareItem(url: url)
-            showShareSheet = true
-            #else
-            showExportSuccess = true
-            #endif
-        } else {
-            exportError = exporter.lastExportError ?? "Error desconocido"
-        }
-    }
-
-    private func exportToiCloudDrive() {
-        let exporter = JSONExporter(context: modelContext)
-        if let url = exporter.exportToiCloudDrive() {
-            showExportSuccess = true
-            print("✅ iCloud Drive: \(url.path)")
-        } else {
-            exportError = exporter.lastExportError ?? "Error desconocido"
         }
     }
 }
+
+// MARK: - Export Filter Sheet
+
+#if os(iOS)
+struct ExportFilterSheet: View {
+    @Environment(\.dismiss) private var dismiss
+
+    @Binding var fromDate: Date
+    @Binding var toDate: Date
+    @Binding var useDateFilter: Bool
+    @Binding var summaryOnly: Bool
+    @Binding var selectedWorkoutTypes: Set<String>
+
+    let workoutTypes: [String]
+    let onExport: (URL?) -> Void
+
+    @Environment(\.modelContext) private var modelContext
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    Toggle("Filtrar por rango de fechas", isOn: $useDateFilter)
+
+                    if useDateFilter {
+                        DatePicker("Desde", selection: $fromDate, displayedComponents: [.date])
+                            .datePickerStyle(.compact)
+
+                        DatePicker("Hasta", selection: $toDate, in: fromDate...Date(), displayedComponents: [.date])
+                            .datePickerStyle(.compact)
+                    }
+                } header: {
+                    Text("Rango de fechas")
+                }
+
+                Section {
+                    ForEach(workoutTypes, id: \.self) { type in
+                        Toggle(type.capitalized, isOn: Binding(
+                            get: { selectedWorkoutTypes.contains(type) },
+                            set: { isSelected in
+                                if isSelected {
+                                    selectedWorkoutTypes.insert(type)
+                                } else {
+                                    selectedWorkoutTypes.remove(type)
+                                }
+                            }
+                        ))
+                    }
+                } header: {
+                    Text("Tipos de entrenamiento")
+                } footer: {
+                    Text("Dejá todos sin seleccionar para incluir todos los tipos.")
+                }
+
+                Section {
+                    Toggle("Solo resumen (sin detalles)", isOn: $summaryOnly)
+                } header: {
+                    Text("Opciones")
+                } footer: {
+                    Text("Solo exporta las estadísticas agregadas, sin la lista de workouts.")
+                }
+            }
+            .navigationTitle("Filtrar exportación")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancelar") {
+                        dismiss()
+                    }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Exportar") {
+                        performExport()
+                        dismiss()
+                    }
+                }
+            }
+        }
+    }
+
+    private func performExport() {
+        let exporter = JSONExporter(context: modelContext)
+
+        // Determine filter parameters
+        let from = useDateFilter ? fromDate : nil
+        let to = useDateFilter ? toDate : nil
+        let types = selectedWorkoutTypes.isEmpty ? nil : Array(selectedWorkoutTypes)
+
+        let url = exporter.exportFilteredJSON(from: from, to: to, workoutTypes: types, summaryOnly: summaryOnly)
+        onExport(url)
+    }
+}
+#endif
 
 // MARK: - Share Sheet (iOS)
 

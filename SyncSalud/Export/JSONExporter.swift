@@ -3,6 +3,7 @@ import SwiftData
 import UniformTypeIdentifiers
 #if os(iOS)
 import BackgroundTasks
+import UIKit
 #endif
 
 /// Maneja la exportación de datos a JSON
@@ -49,9 +50,74 @@ final class JSONExporter {
         }
     }
 
+    /// Exporta workouts filtrados a un archivo JSON en el directorio de documentos
+    /// - Parameters:
+    ///   - fromDate: fecha inicial del filtro (nil = sin límite inferior)
+    ///   - toDate: fecha final del filtro (nil = sin límite superior)
+    ///   - workoutTypes: tipos de workout a incluir (nil = todos)
+    ///   - summaryOnly: si es true, solo incluye estadísticas agregadas sin detalles
+    func exportFilteredJSON(from fromDate: Date? = nil, to toDate: Date? = nil, workoutTypes: [String]? = nil, summaryOnly: Bool = false) -> URL? {
+        // Fetch all records and filter in memory (simpler and more reliable than complex predicates)
+        guard var records = try? modelContext.fetch(FetchDescriptor<WorkoutRecord>(sortBy: [SortDescriptor(\.startDate, order: .reverse)])) else {
+            lastExportError = "No se pudieron leer los datos"
+            return nil
+        }
+
+        // Apply date filters
+        if let from = fromDate {
+            records = records.filter { $0.startDate >= from }
+        }
+        if let to = toDate {
+            records = records.filter { $0.startDate <= to }
+        }
+
+        // Filter by workout types if provided
+        if let types = workoutTypes, !types.isEmpty {
+            records = records.filter { types.contains($0.workoutType) }
+        }
+
+        guard let jsonData = buildExportJSON(records, summaryOnly: summaryOnly) else { return nil }
+
+        do {
+            let fileName = summaryOnly
+                ? "syncsalud_resumen_\(Int(Date().timeIntervalSince1970)).json"
+                : "syncsalud_\(Int(Date().timeIntervalSince1970)).json"
+            let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+            let fileURL = documentsPath.appendingPathComponent(fileName)
+
+            try jsonData.write(to: fileURL, options: .atomic)
+
+            lastExportURL = fileURL
+            lastExportError = nil
+            print("📄 Exportado (filtrado) a: \(fileURL.path)")
+            return fileURL
+        } catch {
+            lastExportError = "Error al exportar: \(error.localizedDescription)"
+            print(lastExportError ?? "")
+            return nil
+        }
+    }
+
+    // MARK: - iCloud Availability Check
+
+    /// Verifica si iCloud Drive está disponible y configurado
+    var isICloudAvailable: Bool {
+        FileManager.default.ubiquityIdentityToken != nil
+    }
+
+    /// Obtiene el mensaje de error detallado para iCloud
+    func iCloudStatusMessage() -> String {
+        if FileManager.default.ubiquityIdentityToken != nil {
+            return "iCloud disponible"
+        } else {
+            return "iCloud Drive no está configurado. Iniciá sesión en iCloud en Ajustes → [tu nombre] → iCloud."
+        }
+    }
+
     // MARK: - Export to iCloud Drive
 
-    /// Exporta a iCloud Drive para que esté disponible en todos tus dispositivos
+    /// Exporta a iCloud Drive usando ShareSheet (el flujo estándar de iOS)
+    /// El usuario elige guardar en iCloud Drive via el selector de ubicación
     func exportToiCloudDrive() -> URL? {
         guard let records = try? modelContext.fetch(FetchDescriptor<WorkoutRecord>()) else {
             lastExportError = "No se pudieron leer los datos"
@@ -60,32 +126,31 @@ final class JSONExporter {
 
         guard let jsonData = buildExportJSON(records) else { return nil }
 
-        // Obtener la URL de iCloud Drive
-        guard let iCloudURL = FileManager.default.url(forUbiquityContainerIdentifier: nil)?
-            .appendingPathComponent("Documents") else {
-            lastExportError = "iCloud Drive no está configurado. Iniciá sesión en iCloud en Ajustes."
+        // Verificar iCloud primero (solo token, no container)
+        let manager = ICloudDocumentsManager.shared
+        if !manager.isICloudDriveConfigured {
+            lastExportError = "iCloud Drive no está configurado. Iniciá sesión en iCloud en Ajustes → [tu nombre] → iCloud."
+            print("iCloud: \(manager.diagnosticStatus())")
             return nil
         }
 
-        // Crear carpeta SyncSalud en iCloud Drive
-        let syncSaludFolder = iCloudURL.appendingPathComponent("SyncSalud", isDirectory: true)
-        try? FileManager.default.createDirectory(at: syncSaludFolder, withIntermediateDirectories: true)
-
+        // Guardar en Documents local para poder compartir via ShareSheet
         let fileName = "syncsalud_\(Int(Date().timeIntervalSince1970)).json"
-        let fileURL = syncSaludFolder.appendingPathComponent(fileName)
-
-        do {
-            try jsonData.write(to: fileURL, options: .atomic)
-
-            lastExportURL = fileURL
-            lastExportError = nil
-            print("📄 Exportado a iCloud Drive: \(fileURL.path)")
-            return fileURL
-        } catch {
-            lastExportError = "Error al exportar a iCloud Drive: \(error.localizedDescription)"
-            print(lastExportError ?? "")
+        guard let fileURL = manager.prepareFileForSharing(fileName: fileName, jsonData: jsonData) else {
+            lastExportError = "Error preparando archivo para exportar"
             return nil
         }
+
+        lastExportURL = fileURL
+        lastExportError = nil
+        print("📄 Exportado para compartir: \(fileURL.path)")
+        return fileURL
+    }
+
+    /// Abre la carpeta SyncSalud en la app Archivos (Files)
+    func openInFiles() {
+        // No disponible con el enfoque ShareSheet
+        print("iCloud: openInFiles no disponible con ShareSheet")
     }
 
     // MARK: - Scheduled Export (iOS background)
@@ -151,7 +216,23 @@ final class JSONExporter {
 
     // MARK: - Helpers
 
-    private func buildExportJSON(_ records: [WorkoutRecord]) -> Data? {
+    private func buildExportJSON(_ records: [WorkoutRecord], summaryOnly: Bool = false, month: String? = nil) -> Data? {
+        return JSONExporter.buildJSONData(records: records, summaryOnly: summaryOnly, month: month)
+    }
+
+    // MARK: - Static helper (sin ModelContext, para uso desde VaultManager y tests)
+
+    /// Construye el JSON serializado a partir de un array de records, sin requerir un ModelContext.
+    /// - Parameters:
+    ///   - records: workouts a serializar
+    ///   - summaryOnly: si true, omite el array `workouts` y deja solo el summary
+    ///   - month: etiqueta opcional del mes (formato "YYYY-MM") para hacer el archivo self-describing
+    /// - Returns: Data JSON pretty-printed con keys ordenadas, o nil si la serialización falla
+    static func buildJSONData(records: [WorkoutRecord], summaryOnly: Bool = false, month: String? = nil) -> Data? {
+        return JSONExporter.serializeRecords(records, summaryOnly: summaryOnly, month: month)
+    }
+
+    private static func serializeRecords(_ records: [WorkoutRecord], summaryOnly: Bool, month: String?) -> Data? {
         let formatter = ISO8601DateFormatter()
 
         let workoutsArray: [[String: Any]] = records.map { record in
@@ -174,11 +255,10 @@ final class JSONExporter {
         let fromDate = dates.first.map { formatter.string(from: $0) } ?? ""
         let toDate = dates.last.map { formatter.string(from: $0) } ?? ""
 
-        let exportDict: [String: Any] = [
+        var exportDict: [String: Any] = [
             "exportedAt": formatter.string(from: Date()),
             "source": "SyncSalud",
             "version": "1.0",
-            "workouts": workoutsArray,
             "summary": [
                 "totalWorkouts": records.count,
                 "totalCalories": records.compactMap(\.calories).reduce(0, +),
@@ -190,6 +270,14 @@ final class JSONExporter {
                 ]
             ]
         ]
+
+        if let month {
+            exportDict["month"] = month
+        }
+
+        if !summaryOnly {
+            exportDict["workouts"] = workoutsArray
+        }
 
         return try? JSONSerialization.data(withJSONObject: exportDict, options: [.prettyPrinted, .sortedKeys])
     }
