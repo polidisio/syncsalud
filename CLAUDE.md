@@ -1,126 +1,129 @@
-# CLAUDE.md - ExifCli (exiftool-cli)
+# CLAUDE.md — SyncSalud
 
-## Project Overview
+> App local-first que extrae datos de entrenamiento de Apple Health y los sincroniza entre iPhone y Mac para que agentes de IA los consulten.
 
-**Name:** ExifCli  
-**Type:** CLI Tool (Python)  
-**Description:** CLI tool for extracting, exporting, and removing EXIF metadata from photos. Supports interactive menu mode with native macOS file picker, batch processing, and multiple export formats.  
-**Owner:** @polidisio  
+---
+
+## Proyecto
+
+**Nombre:** SyncSalud
+**Tipo:** App nativa (iOS + macOS)
+**Descripción:** Lee workouts de Apple Health → guarda en SQLite (SwiftData) → sincroniza entre dispositivos via CloudKit privado → expone API REST local en macOS (`127.0.0.1:8080`) para agentes externos.
+**Repo:** `https://github.com/polidisio/syncsalud`
+**Owner:** @polidisio
+
+---
 
 ## Tech Stack
 
-- **Language:** Python 3.9+
-- **Dependencies:** Pillow, piexif, click, colorama
-- **Platform:** macOS/Linux
-- **Build:** setuptools (pyproject.toml)
+| Capa | Tecnología |
+|------|------------|
+| Cliente | Swift 5.9 + SwiftUI (iOS 17+ / macOS 14+) |
+| Base de datos | SwiftData (SQLite) |
+| Sincronización | CloudKit (`NSPersistentCloudKitContainer`) — contenedor privado, gratis |
+| API local | `NWListener` (Network framework) en macOS, puerto `8080` |
+| Fuente de datos | HealthKit |
+| Background sync | `BGTaskScheduler` (iOS) |
+| Reports | Resend (email mensual) |
 
-## Quick Start
-
-```bash
-# Install from source
-pip install -e .
-
-# Interactive mode
-exiftool-cli
-
-# Extract EXIF
-exiftool-cli extract photo.jpg
-
-# Export to JSON
-exiftool-cli export photo.jpg -o output.json
-
-# Export to CSV
-exiftool-cli export photo.jpg -o output.csv
-
-# Remove EXIF (preserves image quality)
-exiftool-cli remove photo.jpg -o clean_photo.jpg
-
-# Keep GPS only
-exiftool-cli remove photo.jpg --keep-gps -o clean_photo.jpg
-
-# Batch process folder
-exiftool-cli batch --folder /path/to/photos --extract
-exiftool-cli batch --folder /path/to/photos --recursive --remove
-```
-
-## File Structure
-
-```
-ExifCli/
-├── src/
-│   └── exiftool_cli/           # Main package
-├── tests/                       # Pytest tests
-├── Formula/                     # Homebrew formula
-├── homebrew-tap/               # Homebrew tap repo
-├── pyproject.toml
-├── MANPAGE.md
-├── README.md
-└── CLAUDE.md
-```
-
-## Features
-
-| Feature | Description |
-|---------|-------------|
-| Interactive Mode | Menu-driven with macOS file picker |
-| Extract | Display metadata in readable table |
-| Export | JSON or CSV format |
-| Remove | Strip EXIF preserving quality |
-| Batch | Process entire folders with progress |
-
-## Supported Formats
-
-- JPEG (.jpg, .jpeg)
-- PNG (.png)
-- TIFF (.tif, .tiff)
-
-## Conventions
-
-- Entry point: `exiftool_cli.cli:main`
-- Package location: `src/exiftool_cli/`
-- Tests: pytest in `tests/` directory
-
-## Testing
-
-```bash
-# Run all tests
-pytest tests/ -v
-
-# Run with coverage
-pytest tests/ --cov=src/exiftool_cli --cov-report=html
-
-# Dev install with test deps
-pip install -e ".[dev]"
-```
-
-## Homebrew Installation
-
-```bash
-brew install polidisio/tap/exiftool-cli
-```
-
-## Important Rules
-
-### ✅ Always Do
-- Preserve image quality when removing EXIF
-- Test on real photos before release
-- Keep piexif compatible with target formats
-
-### ❌ Never Do
-- Modify EXIF in place (always output to new file)
-- Commit test photos to repo
-
-## Resources
-
-- Homebrew tap: `https://github.com/polidisio/homebrew-tap`
-- Token optimization tips: `shared/claude-optimization-tips.md` (Obsidian Vault)
+**Targets Xcode:**
+- `SyncSalud iOS` → `com.saraiba.syncsalud.app`
+- `SyncSaludMac` → `com.saraiba.syncsalud.mac`
+- Development Team: `DQ7D6387N8`
 
 ---
 
-**Owner:** Jose Maudisio (@polidisio)  
-**Last updated:** 2026-04-24
+## Estructura del Proyecto
+
+```
+syncsalud/
+├── Docs/
+│   ├── PRD.md              # Product Requirements
+│   ├── ARCHITECTURE.md      # Arquitectura técnica (leer primero)
+│   ├── DATA_MODEL.md        # Modelo de datos SwiftData + HealthKit
+│   └── IMPLEMENTATION_PLAN.md
+├── SyncSalud/
+│   ├── SyncSaludApp.swift   # Entry point
+│   ├── Models/
+│   │   ├── WorkoutRecord.swift   # Entidad principal
+│   │   ├── WorkoutMetric.swift   # Métricas por intervalo (opcional)
+│   │   └── SyncLog.swift         # Auditoría de sync
+│   ├── Health/
+│   │   └── HealthKitService.swift  # Lectura de workouts
+│   ├── Sync/
+│   │   ├── HealthSyncManager.swift    # Sync HealthKit → SwiftData
+│   │   └── BackgroundSyncManager.swift # BGTaskScheduler
+│   ├── API/
+│   │   └── LocalAPIServer.swift   # NWListener — solo macOS
+│   ├── Export/
+│   │   └── JSONExporter.swift
+│   └── UI/
+│       ├── ContentView.swift
+│       ├── DashboardView.swift
+│       ├── WorkoutListView.swift
+│       └── SettingsView.swift
+└── CLAUDE.md  # ← este archivo
+```
 
 ---
+
+## API Local (macOS)
+
+La API corre en `http://127.0.0.1:8080`. Solo escucha en localhost — no es accesible desde la red.
+
+**Endpoints:**
+
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| GET | `/v1/health` | Health check |
+| GET | `/v1/workouts` | Lista (params: `type`, `from`, `to`, `limit`, `offset`) |
+| GET | `/v1/workouts/:uuid` | Workout individual |
+| GET | `/v1/workouts/latest` | Último workout |
+| GET | `/v1/workouts/range?from=&to=` | Rango de fechas |
+| GET | `/v1/summary` | Resumen (hoy, semana, mes, racha) |
+| GET | `/v1/export` | Export completo a JSON |
+
+**Ejemplo de uso (agente):**
+```bash
+curl http://127.0.0.1:8080/v1/workouts/latest
+curl "http://127.0.0.1:8080/v1/workouts?type=running&limit=10"
+curl http://127.0.0.1:8080/v1/summary
+```
+
+---
+
+## Modelo de Datos
+
+**WorkoutRecord** (principal):
+- `id` (UUID PK), `workoutType` (String), `startDate`, `endDate`, `duration`
+- `calories`?, `distance`?, `distanceUnit`?
+- `avgHeartRate`?, `maxHeartRate`?, `minHeartRate`?
+- `source`, `healthKitID` (para dedup), `metadata` (JSON blob)
+- `syncStatus`: `"synced"` | `"pending"` | `"failed"`
+
+**WorkoutMetric** (opcional, por intervalo):
+- `heartRate`, `cadence`, `speed`, `power`, `altitude`, `locationLat/Lng`
+
+**Deduplicación:** Se usa `healthKitID` (UUID de HealthKit). Si ya existe, se actualiza en vez de insertar.
+
+---
+
+## Patrones de Prompting (Boris/Claude Code)
+
+### Para features nuevas:
+```
+"Before you write code, make a plan and run it by me for approval."
+```
+
+### Para iteración con tests:
+```
+"Build this feature and run the test suite. Iterate until all tests pass."
+```
+
+### Para commits automáticos:
+```
+"I want to think with this one, this commit push here."
+```
 
 ---
 
@@ -148,72 +151,56 @@ Sé directo: "Añade validación al form" — no necesitas explicar contexto.
 
 ### SIEMPRE
 - Código legible y mantenible
-- Seguir convenciones del proyecto
+- Seguir convenciones Swift (async/await, optionals, SwiftData macros)
 - DRY — no duplicar lógica
 - Validar input antes de procesar
+- Manejar errores de HealthKit (permisos, disponibilidad)
 
 ### NUNCA
-- Hardcodear credenciales o tokens
+- Hardcodear credenciales o tokens — usar environment variables
 - "Hacky fixes" sin justificación
 - Duplicar código sin razón
 - Commits sin mensaje descriptivo
+- Subir carpetas enteras al contexto — solo archivos necesarios
 
 ---
 
-## Security
+## Seguridad
 
-- **NUNCA hardcodear** credenciales — usar environment variables
+- **NUNCA hardcodear** credenciales — usar `.env` y nunca commitearlo
 - **NUNCA exponer** tokens en logs o errores
-- **Validar input** antes de procesar
-- Si hay secrets, usar `.env` y nunca commitearlo
+- La API local solo escucha en `127.0.0.1` — no exponer a red
+- Resend API key: configurar via environment variable
 
 ---
 
-## Self-Improvement
+## Recursos
 
-### Si cometes un error
-1. Documentar en `lessons.md` — qué salió mal, por qué, cómo evitarlo
-2. Actualizar este archivo si la convención no estaba clara
-3. No repetir
+**Documentación del proyecto:**
+- `Docs/ARCHITECTURE.md` — Arquitectura y ADRs (leer antes de tocar código)
+- `Docs/DATA_MODEL.md` — Modelo de datos completo
 
-### Si descubres algo útil
-- Documentar en notas del proyecto
-- Compartir con Jose si es relevante
-
----
-
-## Token Optimization
-
-### Hacer
-- Agrupar múltiples requests en uno
-- Editar en vez de reply (menos historial)
-- Nuevo tema = nueva conversación
-- Planificar en chat, construir en workspace
-
-### Evitar
-- Subir carpetas enteras — solo archivos necesarios
-- Múltiples prompts cortos seguidos
-- Usar Opus para tareas simples
-- Mantener contexto irrelevante
-
-**Budget:** ~88% de tokens en conversaciones largas = solo historial. Mantenerlo limpio.
+**Vault Saraiba (contexto personal):**
+- `~/Library/Mobile Documents/iCloud~md~obsidian/Documents/Saraiba/`
+- Skills en: `~/.hermes/skills/`
 
 ---
 
-## Resources
+## Agente SyncSalud Coach
 
-**Obsidian Vault:** `~/Library/Mobile Documents/iCloud~md~obsidian/Documents/Saraiba/`
-
-| Recurso | Ubicación en Vault |
-|---------|---------------------|
-| Best practices | `shared/coding-best-practices.md` |
-| Optimization tips | `shared/claude-optimization-tips.md` |
-| Skills docs | `shared/openclw-skills.md` |
-| Guía coding agents | `shared/guia-coding-agents.md` |
+El agente que conecta con la API:
+- Script: `~/.hermes/scripts/syncsalud/send_monthly_report.py`
+- API endpoint: `http://192.168.1.201:8080/v1` (fallback: vault snapshot)
+- Resumen en español → Telegram + Obsidian
 
 ---
 
-## Contact
+## Contacto
 
 **Jose Maudisio** — @polidisio
 **Issues:** Abrir en GitHub o preguntar en Telegram
+
+---
+
+*Último actualizado: 2026-06-06*
+*Basado en video de Boris (Anthropic) + documentación del proyecto*
