@@ -23,6 +23,9 @@ struct SettingsView: View {
     @State private var autoExportEnabled: Bool = false
     @State private var exportIntervalHours: Double = 6
 
+    // iCloud Drive folder name
+    @AppStorage("iCloudFolderName") private var iCloudFolderName: String = "SyncSalud"
+
     // Share sheet
     @State private var shareItem: ShareItem?
     @State private var showShareSheet: Bool = false
@@ -200,6 +203,16 @@ struct SettingsView: View {
 
                 // MARK: - Exportación
                 Section {
+                    HStack {
+                        Image(systemName: "folder")
+                            .foregroundStyle(.secondary)
+                        Text("Carpeta en iCloud Drive")
+                        Spacer()
+                        TextField("SyncSalud", text: $iCloudFolderName)
+                            .multilineTextAlignment(.trailing)
+                            .frame(maxWidth: 160)
+                    }
+
                     Button {
                         exportAndShare()
                     } label: {
@@ -210,7 +223,7 @@ struct SettingsView: View {
                     }
 
                     Button {
-                        exportToiCloudDrive()
+                        Task { await exportToiCloudDrive() }
                     } label: {
                         HStack {
                             Image(systemName: "icloud.and.arrow.up")
@@ -218,7 +231,7 @@ struct SettingsView: View {
                         }
                     }
 
-                    Text("• Compartir: AirDrop, Mail, Files, etc.\n• iCloud Drive: queda disponible en todos tus dispositivos Apple")
+                    Text("• Compartir: AirDrop, Mail, Files, etc.\n• iCloud Drive: se guarda en la carpeta indicada arriba")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 } header: {
@@ -255,7 +268,7 @@ struct SettingsView: View {
                                 }
                         }
 
-                        Text("El archivo se guarda automáticamente en iCloud Drive → SyncSalud/")
+                        Text("El archivo se guarda automáticamente en iCloud Drive → \(iCloudFolderName.isEmpty ? "SyncSalud" : iCloudFolderName)/")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -386,9 +399,10 @@ struct SettingsView: View {
         }
     }
 
-    private func exportToiCloudDrive() {
+    private func exportToiCloudDrive() async {
         let exporter = JSONExporter(context: modelContext)
-        if let url = exporter.exportToiCloudDrive() {
+        let name = iCloudFolderName.isEmpty ? "SyncSalud" : iCloudFolderName
+        if let url = await exporter.exportToiCloudDrive(folderName: name) {
             showExportSuccess = true
             print("✅ iCloud Drive: \(url.path)")
         } else {
