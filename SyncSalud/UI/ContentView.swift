@@ -44,19 +44,22 @@ struct ContentView: View {
         TabView(selection: $selectedTab) {
             DashboardView()
                 .tabItem {
-                    Label { Text(verbatim: Tab.dashboard.label) } icon: { Image(systemName: Tab.dashboard.icon) }
+                    Image(systemName: Tab.dashboard.icon)
+                    Text(verbatim: Tab.dashboard.label)
                 }
                 .tag(Tab.dashboard)
 
             WorkoutListView()
                 .tabItem {
-                    Label { Text(verbatim: Tab.workouts.label) } icon: { Image(systemName: Tab.workouts.icon) }
+                    Image(systemName: Tab.workouts.icon)
+                    Text(verbatim: Tab.workouts.label)
                 }
                 .tag(Tab.workouts)
 
             SettingsView()
                 .tabItem {
-                    Label { Text(verbatim: Tab.settings.label) } icon: { Image(systemName: Tab.settings.icon) }
+                    Image(systemName: Tab.settings.icon)
+                    Text(verbatim: Tab.settings.label)
                 }
                 .tag(Tab.settings)
         }
@@ -72,14 +75,14 @@ struct ContentView: View {
         NavigationSplitView {
             #if os(macOS)
             List(Tab.allCases, id: \.self, selection: $selectedTab) { tab in
-                Label { Text(verbatim: tab.label) } icon: { Image(systemName: tab.icon) }
+                Label(tab.label, systemImage: tab.icon)
                     .tag(tab)
             }
             .listStyle(.sidebar)
             .frame(minWidth: 180)
             #else
             List(Tab.allCases, id: \.self) { tab in
-                Label { Text(verbatim: tab.label) } icon: { Image(systemName: tab.icon) }
+                Label(tab.label, systemImage: tab.icon)
                     .tag(tab)
             }
             .frame(minWidth: 180)
