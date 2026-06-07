@@ -63,13 +63,14 @@ final class JSONExporter {
 
         guard let jsonData = buildExportJSON(records) else { return nil }
 
-        // url(forUbiquityContainerIdentifier:) bloquea — debe ejecutarse fuera del main thread
+        // url(forUbiquityContainerIdentifier:) bloquea — debe ejecutarse fuera del main thread.
+        // Se prueba primero nil (primer container registrado, el más seguro) y si falla
+        // se intenta con el identifier explícito.
         let iCloudBase: URL? = await withCheckedContinuation { continuation in
             DispatchQueue.global(qos: .utility).async {
-                let url = FileManager.default
-                    .url(forUbiquityContainerIdentifier: Self.containerIdentifier)?
-                    .appendingPathComponent("Documents")
-                continuation.resume(returning: url)
+                let base = FileManager.default.url(forUbiquityContainerIdentifier: nil)
+                    ?? FileManager.default.url(forUbiquityContainerIdentifier: Self.containerIdentifier)
+                continuation.resume(returning: base?.appendingPathComponent("Documents"))
             }
         }
 

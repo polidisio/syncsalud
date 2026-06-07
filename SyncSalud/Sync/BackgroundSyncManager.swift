@@ -190,9 +190,10 @@ class SyncAppDelegate: NSObject, UIApplicationDelegate {
             JSONExporterDirect.scheduleBackgroundExport()
         }
 
-        // Ejecutar el export
+        // Ejecutar el export real en background
         let operation = Task {
-            if let url = JSONExporterDirect.performBackgroundExport() {
+            let url = await JSONExporterDirect.performBackgroundExport()
+            if let url {
                 print("📤 Export background completado: \(url.lastPathComponent)")
                 task.setTaskCompleted(success: true)
             } else {
@@ -207,8 +208,8 @@ class SyncAppDelegate: NSObject, UIApplicationDelegate {
     }
 }
 
-/// Wrapper estático para acceder a UserDefaults desde el AppDelegate
-/// (que no tiene acceso al ModelContext)
+/// Wrapper estático para el export en background desde el AppDelegate.
+/// Crea su propio ModelContainer — mismo patrón que BackgroundSyncHelper.
 enum JSONExporterDirect {
     static var isScheduledExportEnabled: Bool {
         UserDefaults.standard.bool(forKey: "scheduledExportEnabled")
@@ -233,13 +234,23 @@ enum JSONExporterDirect {
         }
     }
 
-    /// Esta función hace un export "best effort" sin ModelContext.
-    /// Devuelve la URL del último export si existe.
-    static func performBackgroundExport() -> URL? {
-        // Sin ModelContext no podemos acceder a los datos aquí.
-        // El export real lo hace el usuario desde la app abierta.
-        // Esta función queda como hook para futuras versiones.
-        return nil
+    /// Crea un ModelContainer propio y exporta a iCloud Drive.
+    static func performBackgroundExport() async -> URL? {
+        do {
+            let schema = Schema([WorkoutRecord.self, WorkoutMetric.self, SyncLog.self])
+            let config = ModelConfiguration(
+                cloudKitDatabase: .private("iCloud.com.saraiba.syncsalud.app")
+            )
+            let container = try ModelContainer(for: schema, configurations: config)
+            let context = ModelContext(container)
+
+            let folderName = UserDefaults.standard.string(forKey: "iCloudFolderName") ?? "SyncSalud"
+            let exporter = JSONExporter(context: context)
+            return await exporter.exportToiCloudDrive(folderName: folderName)
+        } catch {
+            print("❌ Background export: error al crear container: \(error.localizedDescription)")
+            return nil
+        }
     }
 }
 #endif
