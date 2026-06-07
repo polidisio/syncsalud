@@ -51,8 +51,11 @@ final class JSONExporter {
 
     // MARK: - Export to iCloud Drive
 
-    /// Exporta a iCloud Drive para que esté disponible en todos tus dispositivos
-    func exportToiCloudDrive() -> URL? {
+    static let containerIdentifier = "iCloud.com.saraiba.syncsalud.app"
+
+    /// Exporta a iCloud Drive. `folderName` es el nombre de la carpeta dentro del contenedor.
+    /// Debe llamarse desde un contexto async — resuelve la URL del contenedor en background.
+    func exportToiCloudDrive(folderName: String = "SyncSalud") async -> URL? {
         guard let records = try? modelContext.fetch(FetchDescriptor<WorkoutRecord>()) else {
             lastExportError = "No se pudieron leer los datos"
             return nil
@@ -60,30 +63,42 @@ final class JSONExporter {
 
         guard let jsonData = buildExportJSON(records) else { return nil }
 
-        // Obtener la URL de iCloud Drive
-        guard let iCloudURL = FileManager.default.url(forUbiquityContainerIdentifier: nil)?
-            .appendingPathComponent("Documents") else {
-            lastExportError = "iCloud Drive no está configurado. Iniciá sesión en iCloud en Ajustes."
+        // url(forUbiquityContainerIdentifier:) bloquea — debe ejecutarse fuera del main thread
+        let iCloudBase: URL? = await withCheckedContinuation { continuation in
+            DispatchQueue.global(qos: .utility).async {
+                let url = FileManager.default
+                    .url(forUbiquityContainerIdentifier: Self.containerIdentifier)?
+                    .appendingPathComponent("Documents")
+                continuation.resume(returning: url)
+            }
+        }
+
+        guard let iCloudURL = iCloudBase else {
+            lastExportError = "iCloud Drive no disponible. Verificá tu sesión en Ajustes → Apple ID."
             return nil
         }
 
-        // Crear carpeta SyncSalud en iCloud Drive
-        let syncSaludFolder = iCloudURL.appendingPathComponent("SyncSalud", isDirectory: true)
-        try? FileManager.default.createDirectory(at: syncSaludFolder, withIntermediateDirectories: true)
+        let name = folderName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let exportFolder = iCloudURL.appendingPathComponent(name.isEmpty ? "SyncSalud" : name, isDirectory: true)
+
+        do {
+            try FileManager.default.createDirectory(at: exportFolder, withIntermediateDirectories: true)
+        } catch {
+            lastExportError = "No se pudo crear la carpeta '\(name)': \(error.localizedDescription)"
+            return nil
+        }
 
         let fileName = "syncsalud_\(Int(Date().timeIntervalSince1970)).json"
-        let fileURL = syncSaludFolder.appendingPathComponent(fileName)
+        let fileURL = exportFolder.appendingPathComponent(fileName)
 
         do {
             try jsonData.write(to: fileURL, options: .atomic)
-
             lastExportURL = fileURL
             lastExportError = nil
             print("📄 Exportado a iCloud Drive: \(fileURL.path)")
             return fileURL
         } catch {
             lastExportError = "Error al exportar a iCloud Drive: \(error.localizedDescription)"
-            print(lastExportError ?? "")
             return nil
         }
     }

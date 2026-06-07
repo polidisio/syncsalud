@@ -7,7 +7,7 @@ options:
   createIntermediateGroups: true
   generateEmptyDirectories: true
   groupSortPosition: top
-  developmentLanguage: en
+  developmentLanguage: es
 
 settings:
   base:

@@ -9,9 +9,17 @@ struct ContentView: View {
     @State private var selectedTab: Tab = .dashboard
 
     enum Tab: String, CaseIterable, Hashable {
-        case dashboard = "Dashboard"
-        case workouts = "Workouts"
-        case settings = "Settings"
+        case dashboard
+        case workouts
+        case settings
+
+        var label: String {
+            switch self {
+            case .dashboard: return "Dashboard"
+            case .workouts: return "Entrenamientos"
+            case .settings: return "Ajustes"
+            }
+        }
 
         var icon: String {
             switch self {
@@ -36,19 +44,19 @@ struct ContentView: View {
         TabView(selection: $selectedTab) {
             DashboardView()
                 .tabItem {
-                    Label(Tab.dashboard.rawValue, systemImage: Tab.dashboard.icon)
+                    Label { Text(verbatim: Tab.dashboard.label) } icon: { Image(systemName: Tab.dashboard.icon) }
                 }
                 .tag(Tab.dashboard)
 
             WorkoutListView()
                 .tabItem {
-                    Label(Tab.workouts.rawValue, systemImage: Tab.workouts.icon)
+                    Label { Text(verbatim: Tab.workouts.label) } icon: { Image(systemName: Tab.workouts.icon) }
                 }
                 .tag(Tab.workouts)
 
             SettingsView()
                 .tabItem {
-                    Label(Tab.settings.rawValue, systemImage: Tab.settings.icon)
+                    Label { Text(verbatim: Tab.settings.label) } icon: { Image(systemName: Tab.settings.icon) }
                 }
                 .tag(Tab.settings)
         }
@@ -64,14 +72,14 @@ struct ContentView: View {
         NavigationSplitView {
             #if os(macOS)
             List(Tab.allCases, id: \.self, selection: $selectedTab) { tab in
-                Label(tab.rawValue, systemImage: tab.icon)
+                Label { Text(verbatim: tab.label) } icon: { Image(systemName: tab.icon) }
                     .tag(tab)
             }
             .listStyle(.sidebar)
             .frame(minWidth: 180)
             #else
             List(Tab.allCases, id: \.self) { tab in
-                Label(tab.rawValue, systemImage: tab.icon)
+                Label { Text(verbatim: tab.label) } icon: { Image(systemName: tab.icon) }
                     .tag(tab)
             }
             .frame(minWidth: 180)
