@@ -81,7 +81,7 @@ struct DashboardView: View {
                     HStack(spacing: 6) {
                         ProgressView()
                             .scaleEffect(0.8)
-                        Text("dashboard.status.syncing")
+                        Text("dashboard.status.syncing".localized())
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -97,24 +97,24 @@ struct DashboardView: View {
         Group {
             switch healthService.authorizationState {
             case .authorized:
-                Label("dashboard.status.connected", systemImage: "checkmark.circle.fill")
+                Label("dashboard.status.connected".localized(), systemImage: "checkmark.circle.fill")
                     .foregroundStyle(.green)
                     .font(.caption)
                     .labelStyle(.titleAndIcon)
             case .denied:
-                Label("dashboard.status.noAccess", systemImage: "xmark.circle.fill")
+                Label("dashboard.status.noAccess".localized(), systemImage: "xmark.circle.fill")
                     .foregroundStyle(.red)
                     .font(.caption)
             case .notRequested:
-                Label("dashboard.status.notConnected", systemImage: "questionmark.circle.fill")
+                Label("dashboard.status.notConnected".localized(), systemImage: "questionmark.circle.fill")
                     .foregroundStyle(.orange)
                     .font(.caption)
             case .notAvailable:
-                Label("dashboard.status.notAvailable", systemImage: "minus.circle.fill")
+                Label("dashboard.status.notAvailable".localized(), systemImage: "minus.circle.fill")
                     .foregroundStyle(.orange)
                     .font(.caption)
             case .error:
-                Label("dashboard.status.error", systemImage: "exclamationmark.triangle.fill")
+                Label("dashboard.status.error".localized(), systemImage: "exclamationmark.triangle.fill")
                     .foregroundStyle(.orange)
                     .font(.caption)
             }
@@ -125,34 +125,34 @@ struct DashboardView: View {
 
     private var summarySection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            sectionHeader("dashboard.summary.title", systemImage: "chart.bar.fill")
+            sectionHeader("dashboard.summary.title".localized(), systemImage: "chart.bar.fill")
 
             LazyVGrid(columns: gridColumns, spacing: 12) {
                 summaryCard(
-                    title: "dashboard.summary.today",
+                    title: "dashboard.summary.today".localized(),
                     value: "\(todayWorkouts.count)",
-                    subtitle: "dashboard.summary.workouts",
+                    subtitle: "dashboard.summary.workouts".localized(),
                     icon: "figure.run",
                     color: .blue
                 )
                 summaryCard(
-                    title: "dashboard.summary.thisWeek",
+                    title: "dashboard.summary.thisWeek".localized(),
                     value: "\(weekWorkouts.count)",
-                    subtitle: "dashboard.summary.workouts",
+                    subtitle: "dashboard.summary.workouts".localized(),
                     icon: "calendar",
                     color: .green
                 )
                 summaryCard(
-                    title: "dashboard.summary.calories",
+                    title: "dashboard.summary.calories".localized(),
                     value: "\(Int(weekCalories))",
-                    subtitle: "dashboard.summary.calories.week",
+                    subtitle: "dashboard.summary.calories.week".localized(),
                     icon: "flame.fill",
                     color: .orange
                 )
                 summaryCard(
-                    title: "dashboard.summary.duration",
+                    title: "dashboard.summary.duration".localized(),
                     value: weekDurationFormatted,
-                    subtitle: "dashboard.summary.duration.week",
+                    subtitle: "dashboard.summary.duration.week".localized(),
                     icon: "clock.fill",
                     color: .purple
                 )
@@ -197,15 +197,15 @@ struct DashboardView: View {
 
     private var streakSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            sectionHeader("dashboard.streak.title", systemImage: "flame.fill", tint: .orange)
+            sectionHeader("dashboard.streak.title".localized(), systemImage: "flame.fill", tint: .orange)
 
             HStack(spacing: 16) {
-                StreakBadge(value: streak.current, label: "dashboard.streak.current")
-                StreakBadge(value: streak.longest, label: "dashboard.streak.longest")
+                StreakBadge(value: streak.current, label: "dashboard.streak.current".localized())
+                StreakBadge(value: streak.longest, label: "dashboard.streak.longest".localized())
             }
 
             if streak.isActiveToday {
-                Label("dashboard.streak.today", systemImage: "star.fill")
+                Label("dashboard.streak.today".localized(), systemImage: "star.fill")
                     .font(.subheadline)
                     .foregroundStyle(.orange)
             } else if !workouts.isEmpty {
@@ -244,7 +244,7 @@ struct DashboardView: View {
 
     private var recentWorkoutsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            sectionHeader("dashboard.recent.title", systemImage: "clock.arrow.circlepath")
+            sectionHeader("dashboard.recent.title".localized(), systemImage: "clock.arrow.circlepath")
 
             ForEach(recentWorkouts.prefix(5)) { workout in
                 WorkoutRowCompact(workout: workout)
@@ -263,18 +263,18 @@ struct DashboardView: View {
     #if os(macOS)
     private var apiInfoCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            sectionHeader("dashboard.api.title", systemImage: "network", tint: .blue)
+            sectionHeader("dashboard.api.title".localized(), systemImage: "network", tint: .blue)
 
             HStack {
                 Circle()
                     .fill(LocalAPIServer.shared.isRunning ? Color.green : Color.red)
                     .frame(width: 10, height: 10)
-                Text(LocalAPIServer.shared.isRunning ? "dashboard.api.active" : "dashboard.api.inactive")
+                Text(LocalAPIServer.shared.isRunning ? "dashboard.api.active".localized() : "dashboard.api.inactive".localized())
                     .font(.subheadline)
             }
 
             VStack(alignment: .leading, spacing: 4) {
-                Text("dashboard.api.agents")
+                Text("dashboard.api.agents".localized())
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 Text("• GET /v1/workouts")
@@ -301,10 +301,10 @@ struct DashboardView: View {
             Image(systemName: "figure.run")
                 .font(.system(size: 64))
                 .foregroundStyle(.secondary)
-            Text("dashboard.empty.title")
+            Text("dashboard.empty.title".localized())
                 .font(.headline)
                 .foregroundStyle(.secondary)
-            Text("dashboard.empty.instruction")
+            Text("dashboard.empty.instruction".localized())
                 .font(.caption)
                 .foregroundStyle(.tertiary)
                 .multilineTextAlignment(.center)
@@ -315,7 +315,7 @@ struct DashboardView: View {
                     isSyncing = false
                 }
             } label: {
-                Label("dashboard.empty.button", systemImage: "arrow.clockwise")
+                Label("dashboard.empty.button".localized(), systemImage: "arrow.clockwise")
                     .font(.headline)
             }
             .buttonStyle(.borderedProminent)
@@ -331,10 +331,10 @@ struct DashboardView: View {
             Image(systemName: "heart.slash")
                 .font(.system(size: 64))
                 .foregroundStyle(.secondary)
-            Text("dashboard.empty.noPermissions")
+            Text("dashboard.empty.noPermissions".localized())
                 .font(.headline)
                 .foregroundStyle(.secondary)
-            Text("dashboard.empty.noPermissions.instruction")
+            Text("dashboard.empty.noPermissions.instruction".localized())
                 .font(.caption)
                 .foregroundStyle(.tertiary)
         }
@@ -344,11 +344,11 @@ struct DashboardView: View {
 
     // MARK: - Helpers
 
-    private func sectionHeader(_ titleKey: String, systemImage: String, tint: Color = .primary) -> some View {
+    private func sectionHeader(_ title: String, systemImage: String, tint: Color = .primary) -> some View {
         HStack(spacing: 8) {
             Image(systemName: systemImage)
                 .foregroundStyle(tint)
-            Text(titleKey)
+            Text(title)
                 .font(.headline)
         }
     }

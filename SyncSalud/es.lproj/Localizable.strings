@@ -75,6 +75,7 @@
 "settings.sync.interval" = "Intervalo";
 
 "settings.sync.title" = "Sincronización";
+"settings.export.adhoc" = "Exportar y compartir JSON";
 "settings.export.title" = "Exportar y compartir JSON (ad-hoc)";
 "settings.export.hint" = "Para exportar meses o rangos pre-calculados usá el Vault más abajo.";
 "settings.export.button" = "Exportar";

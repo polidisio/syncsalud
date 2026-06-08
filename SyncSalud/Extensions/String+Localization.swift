@@ -1,11 +1,21 @@
-import Foundation
+import SwiftUI
 
 extension String {
     func localized() -> String {
         NSLocalizedString(self, comment: "")
     }
+}
 
-    func localized(with arguments: CVarArg...) -> String {
-        String(format: NSLocalizedString(self, comment: ""), arguments: arguments)
+extension View {
+    func localizedText(_ key: String) -> Text {
+        Text(key.localized())
+    }
+}
+
+struct LocalizedText: View {
+    let key: String
+    
+    var body: Text {
+        Text(key.localized())
     }
 }

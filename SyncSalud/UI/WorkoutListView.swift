@@ -12,7 +12,7 @@ struct WorkoutListView: View {
         #if os(iOS)
         NavigationStack {
             listContent
-                .navigationTitle("workouts.title")
+                .navigationTitle("workouts.title".localized())
                 .navigationBarTitleDisplayMode(.large)
                 .searchable(text: $searchText, prompt: "Buscar por tipo")
                 .toolbar {
@@ -21,7 +21,7 @@ struct WorkoutListView: View {
         }
         #else
         listContent
-            .navigationTitle("workouts.title")
+            .navigationTitle("workouts.title".localized())
             .toolbar {
                 toolbarSyncButton
             }
@@ -90,15 +90,15 @@ struct WorkoutListView: View {
             Image(systemName: "list.bullet.clipboard")
                 .font(.system(size: 64))
                 .foregroundStyle(.secondary)
-            Text("workouts.empty")
+            Text("workouts.empty".localized())
                 .font(.headline)
                 .foregroundStyle(.secondary)
             if !searchText.isEmpty {
-                Text("workouts.empty.search")
+                Text("workouts.empty.search".localized())
                     .font(.caption)
                     .foregroundStyle(.tertiary)
             } else {
-                Text("workouts.empty.instruction")
+                Text("workouts.empty.instruction".localized())
                     .font(.caption)
                     .foregroundStyle(.tertiary)
             }

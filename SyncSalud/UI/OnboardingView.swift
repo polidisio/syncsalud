@@ -41,10 +41,10 @@ struct OnboardingView: View {
                 .foregroundStyle(.blue)
 
             VStack(spacing: 12) {
-                Text("onboarding.welcome.title")
+                Text("onboarding.welcome.title".localized())
                     .font(.largeTitle.bold())
 
-                Text("onboarding.welcome.subtitle")
+                Text("onboarding.welcome.subtitle".localized())
                     .font(.title3)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -57,7 +57,7 @@ struct OnboardingView: View {
             Button {
                 withAnimation { currentPage = 1 }
             } label: {
-                Text("onboarding.welcome.button")
+                Text("onboarding.welcome.button".localized())
                     .font(.headline)
                     .frame(maxWidth: .infinity)
                     .padding()
@@ -79,15 +79,15 @@ struct OnboardingView: View {
                 .foregroundStyle(.red)
 
             VStack(spacing: 12) {
-                Text("onboarding.health.title")
+                Text("onboarding.health.title".localized())
                     .font(.largeTitle.bold())
 
-                Text("onboarding.health.description")
+                Text("onboarding.health.description".localized())
                     .font(.title3)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
 
-                Text("onboarding.health.reassurance")
+                Text("onboarding.health.reassurance".localized())
                     .font(.subheadline)
                     .foregroundStyle(.green)
             }
@@ -102,7 +102,7 @@ struct OnboardingView: View {
                     withAnimation { currentPage = 2 }
                 }
             } label: {
-                Text("onboarding.health.grant")
+                Text("onboarding.health.grant".localized())
                     .font(.headline)
                     .frame(maxWidth: .infinity)
                     .padding()
@@ -115,7 +115,7 @@ struct OnboardingView: View {
             Button {
                 withAnimation { currentPage = 2 }
             } label: {
-                Text("onboarding.health.skip")
+                Text("onboarding.health.skip".localized())
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
@@ -132,15 +132,15 @@ struct OnboardingView: View {
                 .foregroundStyle(.blue)
 
             VStack(spacing: 12) {
-                Text("onboarding.icloud.title")
+                Text("onboarding.icloud.title".localized())
                     .font(.largeTitle.bold())
 
-                Text("onboarding.icloud.description")
+                Text("onboarding.icloud.description".localized())
                     .font(.title3)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
 
-                Text("onboarding.icloud.hint")
+                Text("onboarding.icloud.hint".localized())
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
@@ -152,7 +152,7 @@ struct OnboardingView: View {
             Button {
                 withAnimation { currentPage = 3 }
             } label: {
-                Text("onboarding.icloud.understood")
+                Text("onboarding.icloud.understood".localized())
                     .font(.headline)
                     .frame(maxWidth: .infinity)
                     .padding()
@@ -174,10 +174,10 @@ struct OnboardingView: View {
                 .foregroundStyle(.green)
 
             VStack(spacing: 12) {
-                Text("onboarding.complete.title")
+                Text("onboarding.complete.title".localized())
                     .font(.largeTitle.bold())
 
-                Text("onboarding.complete.subtitle")
+                Text("onboarding.complete.subtitle".localized())
                     .font(.title3)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -190,7 +190,7 @@ struct OnboardingView: View {
             Button {
                 hasCompletedOnboarding = true
             } label: {
-                Text("onboarding.complete.button")
+                Text("onboarding.complete.button".localized())
                     .font(.headline)
                     .frame(maxWidth: .infinity)
                     .padding()

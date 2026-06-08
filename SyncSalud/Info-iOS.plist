@@ -7,18 +7,6 @@
 		<string>com.synctrackers.sync</string>
 		<string>com.synctrackers.export</string>
 	</array>
-	<key>NSUbiquitousContainers</key>
-	<dict>
-		<key>iCloud.com.saraiba.synctrackers</key>
-		<dict>
-			<key>NSUbiquitousContainerIsDocumentScopePublic</key>
-			<true/>
-			<key>NSUbiquitousContainerName</key>
-			<string>Synctrackers</string>
-			<key>NSUbiquitousContainerSupportedFolderLevels</key>
-			<string>Any</string>
-		</dict>
-	</dict>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleExecutable</key>
@@ -41,6 +29,18 @@
 	<string>Synctrackers necesita acceso a tus datos de entrenamiento para sincronizarlos con tus agentes de IA.</string>
 	<key>NSHealthUpdateUsageDescription</key>
 	<string>Synctrackers no escribe datos en HealthKit. Solo lee para mantener tu historial sincronizado.</string>
+	<key>NSUbiquitousContainers</key>
+	<dict>
+		<key>iCloud.com.saraiba.synctrackers</key>
+		<dict>
+			<key>NSUbiquitousContainerIsDocumentScopePublic</key>
+			<true/>
+			<key>NSUbiquitousContainerName</key>
+			<string>Synctrackers</string>
+			<key>NSUbiquitousContainerSupportedFolderLevels</key>
+			<string>Any</string>
+		</dict>
+	</dict>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
@@ -50,16 +50,7 @@
 	<array>
 		<string>fetch</string>
 		<string>processing</string>
-	</array>
-	<key>UIRequiredDeviceCapabilities</key>
-	<array>
-		<string>arm64</string>
-	</array>
-	<key>UISupportedInterfaceOrientations</key>
-	<array>
-		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
+		<string>remote-notification</string>
 	</array>
 	<key>UILaunchScreen</key>
 	<dict>
@@ -68,10 +59,20 @@
 		<key>UIImageName</key>
 		<string></string>
 	</dict>
+	<key>UIRequiredDeviceCapabilities</key>
+	<array>
+		<string>arm64</string>
+	</array>
 	<key>UIRequiresFullScreen</key>
 	<true/>
 	<key>UIStatusBarStyle</key>
 	<string>UIStatusBarStyleDefault</string>
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
 </dict>

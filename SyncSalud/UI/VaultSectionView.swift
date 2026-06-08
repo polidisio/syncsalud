@@ -28,7 +28,7 @@ struct VaultSectionView: View {
 
             if let lastRefresh = index?.lastRefresh, lastRefresh > .distantPast {
                 HStack {
-                    Text("vault.lastUpdate")
+                    Text("vault.lastUpdate".localized())
                     Spacer()
                     Text(lastRefresh, style: .relative)
                         .foregroundStyle(.secondary)
@@ -61,9 +61,9 @@ struct VaultSectionView: View {
                     .foregroundStyle(.red)
             }
         } header: {
-            Text("vault.title")
+            Text("vault.title".localized())
         } footer: {
-            Text("vault.footer")
+            Text("vault.footer".localized())
                 .font(.caption2)
         }
         #if os(iOS)
@@ -81,9 +81,9 @@ struct VaultSectionView: View {
             Image(systemName: "lock.shield.fill")
                 .foregroundStyle(.blue)
             VStack(alignment: .leading, spacing: 2) {
-                Text("vault.status.local")
+                Text("vault.status.local".localized())
                     .font(.subheadline)
-                Text(iCloudMirroring ? "vault.status.icloud" : "vault.status.localOnly")
+                Text(iCloudMirroring ? "vault.status.icloud".localized() : "vault.status.localOnly".localized())
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -98,7 +98,7 @@ struct VaultSectionView: View {
     private func monthsList(months: [String]) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text("vault.availableMonths")
+                Text("vault.availableMonths".localized())
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 Spacer()
@@ -157,10 +157,10 @@ struct VaultSectionView: View {
 
     private var emptyState: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("vault.empty")
+            Text("vault.empty".localized())
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
-            Text("vault.empty.instruction")
+            Text("vault.empty.instruction".localized())
                 .font(.caption2)
                 .foregroundStyle(.secondary)
         }

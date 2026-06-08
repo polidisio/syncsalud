@@ -115,7 +115,7 @@ struct SettingsView: View {
                             .foregroundStyle(.orange)
                     }
                 } header: {
-                    Text("settings.permissions.title")
+                    Text("settings.permissions.title".localized())
                 }
 
                 Section {
@@ -130,7 +130,7 @@ struct SettingsView: View {
                     } label: {
                         HStack {
                             Image(systemName: "arrow.clockwise")
-                            Text(dateFilterEnabled ? "settings.sync.range" : "settings.sync.all")
+                            Text(dateFilterEnabled ? "settings.sync.range".localized() : "settings.sync.all".localized())
                             Spacer()
                             if syncManager.isSyncing {
                                 ProgressView()
@@ -141,7 +141,7 @@ struct SettingsView: View {
 
                     if let last = syncManager.lastSyncDate {
                         HStack {
-                            Text("settings.sync.lastSync")
+                            Text("settings.sync.lastSync".localized())
                             Spacer()
                             Text(last, style: .relative)
                                 .foregroundStyle(.secondary)
@@ -166,7 +166,7 @@ struct SettingsView: View {
                         )
                         .datePickerStyle(.compact)
 
-                        Text("settings.sync.dateFilter.hint")
+                        Text("settings.sync.dateFilter.hint".localized())
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -180,7 +180,7 @@ struct SettingsView: View {
                     if backgroundSyncEnabled {
                         VStack(alignment: .leading) {
                             HStack {
-                                Text("settings.sync.interval")
+                                Text("settings.sync.interval".localized())
                                 Spacer()
                                 Text("\(Int(syncIntervalHours))h")
                                     .foregroundStyle(.secondary)
@@ -193,7 +193,7 @@ struct SettingsView: View {
                     }
                     #endif
                 } header: {
-                    Text("settings.sync.title")
+                    Text("settings.sync.title".localized())
                 }
 
                 Section {
@@ -202,18 +202,18 @@ struct SettingsView: View {
                     } label: {
                         HStack {
                             Image(systemName: "square.and.arrow.up")
-                            Text("settings.export.adhoc")
+                            Text("settings.export.adhoc".localized())
                             Spacer()
                             Image(systemName: "line.3.horizontal.decrease.circle")
                                 .foregroundStyle(.secondary)
                         }
                     }
 
-                    Text("settings.export.hint")
+                    Text("settings.export.hint".localized())
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 } header: {
-                    Text("settings.export.title")
+                    Text("settings.export.title".localized())
                 }
 
                 VaultSectionView()
@@ -222,7 +222,7 @@ struct SettingsView: View {
                 Section {
                     HStack {
                         Image(systemName: "network")
-                        Text("dashboard.api.title")
+                        Text("dashboard.api.title".localized())
                         Spacer()
                         Circle()
                             .fill(LocalAPIServer.shared.isRunning ? Color.green : Color.red)
@@ -231,7 +231,7 @@ struct SettingsView: View {
 
                     if LocalAPIServer.shared.isRunning {
                         VStack(alignment: .leading, spacing: 4) {
-                            Text("settings.export.agents")
+                            Text("settings.export.agents".localized())
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                             Text("• GET http://127.0.0.1:8080/v1/workouts")
@@ -260,30 +260,30 @@ struct SettingsView: View {
                             .foregroundStyle(.red)
                     }
                 } header: {
-                    Text("settings.export.api.title")
+                    Text("settings.export.api.title".localized())
                 }
                 #endif
 
                 Section {
                     HStack {
-                        Text("settings.about.version")
+                        Text("settings.about.version".localized())
                         Spacer()
                         Text("1.0.0")
                             .foregroundStyle(.secondary)
                     }
 
                     HStack {
-                        Text("settings.about.dataModel")
+                        Text("settings.about.dataModel".localized())
                         Spacer()
                         Text("SwiftData + CloudKit")
                             .foregroundStyle(.secondary)
                             .font(.caption)
                     }
                 } header: {
-                    Text("settings.about.title")
+                    Text("settings.about.title".localized())
                 }
             }
-            .navigationTitle("settings.title")
+            .navigationTitle("settings.title".localized())
             .onAppear {
                 iCloudAvailable = FileManager.default.ubiquityIdentityToken != nil
             }
@@ -348,7 +348,7 @@ struct ExportFilterSheet: View {
                             .datePickerStyle(.compact)
                     }
                 } header: {
-                    Text("settings.filter.dateRange")
+                    Text("settings.filter.dateRange".localized())
                 }
 
                 Section {
@@ -365,20 +365,20 @@ struct ExportFilterSheet: View {
                         ))
                     }
                 } header: {
-                    Text("settings.filter.workoutTypes")
+                    Text("settings.filter.workoutTypes".localized())
                 } footer: {
-                    Text("settings.filter.workoutTypes.hint")
+                    Text("settings.filter.workoutTypes.hint".localized())
                 }
 
                 Section {
                     Toggle("settings.filter.summaryOnly", isOn: $summaryOnly)
                 } header: {
-                    Text("settings.filter.options")
+                    Text("settings.filter.options".localized())
                 } footer: {
-                    Text("settings.filter.summaryOnly.hint")
+                    Text("settings.filter.summaryOnly.hint".localized())
                 }
             }
-            .navigationTitle("settings.filter.title")
+            .navigationTitle("settings.filter.title".localized())
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
