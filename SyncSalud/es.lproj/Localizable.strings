@@ -1,0 +1,138 @@
+/* Onboarding */
+"onboarding.welcome.title" = "Bienvenido a Synctrackers";
+"onboarding.welcome.subtitle" = "Sincroniza tus workouts de Apple Health\na todos tus dispositivos.";
+"onboarding.welcome.button" = "Comenzar";
+
+"onboarding.health.title" = "Acceso a Apple Health";
+"onboarding.health.description" = "Synctrackers necesita leer tus workouts\npara sincronizarlos y hacer backup.";
+"onboarding.health.reassurance" = "Solo lectura. Nunca modificamos tus datos.";
+"onboarding.health.grant" = "Conceder Permiso";
+"onboarding.health.skip" = "Omitir";
+
+"onboarding.icloud.title" = "Sincronización con iCloud";
+"onboarding.icloud.description" = "Tus workouts se guardan en iCloud\ny se sincronizan entre tus dispositivos.";
+"onboarding.icloud.hint" = "Usa el mismo Apple ID en todos tus dispositivos.";
+"onboarding.icloud.understood" = "Entendido";
+
+"onboarding.complete.title" = "Listo para empezar";
+"onboarding.complete.subtitle" = "Tus workouts se sincronizarán\nautomáticamente.";
+"onboarding.complete.button" = "Ir al Dashboard";
+
+/* Dashboard */
+"dashboard.status.syncing" = "Sincronizando...";
+"dashboard.status.connected" = "Conectado";
+"dashboard.status.noAccess" = "Sin acceso";
+"dashboard.status.notConnected" = "No conectado";
+"dashboard.status.notAvailable" = "No disponible";
+"dashboard.status.error" = "Error";
+
+"dashboard.summary.title" = "Resumen";
+"dashboard.summary.today" = "Hoy";
+"dashboard.summary.workouts" = "entrenamientos";
+"dashboard.summary.thisWeek" = "Esta semana";
+"dashboard.summary.calories" = "Calorías";
+"dashboard.summary.calories.week" = "kcal esta semana";
+"dashboard.summary.duration" = "Tiempo";
+"dashboard.summary.duration.week" = "esta semana";
+
+"dashboard.streak.title" = "Racha";
+"dashboard.streak.current" = "Actual";
+"dashboard.streak.longest" = "Máxima";
+"dashboard.streak.today" = "¡Entrenaste hoy! 🔥";
+"dashboard.streak.lastWorkout" = "Último entrenamiento: %@";
+
+"dashboard.recent.title" = "Últimos entrenamientos";
+"dashboard.api.title" = "API Local";
+"dashboard.api.active" = "Activa en puerto 8080";
+"dashboard.api.inactive" = "Inactiva";
+"dashboard.api.agents" = "Tus agentes pueden consultar:";
+
+"dashboard.empty.title" = "No hay entrenamientos";
+"dashboard.empty.instruction" = "Tocá Sincronizar o esperá a que la app lea tus workouts de HealthKit";
+"dashboard.empty.button" = "Sincronizar ahora";
+"dashboard.empty.noPermissions" = "HealthKit no conectado";
+"dashboard.empty.noPermissions.instruction" = "Andá a Ajustes para conectar HealthKit";
+"dashboard.unknown" = "desconocido";
+
+/* Settings */
+"settings.health.connected" = "Conectado";
+"settings.health.connect" = "Conectar";
+"settings.health.noAccess" = "Sin acceso";
+"settings.health.openSettings" = "Abrir Ajustes";
+"settings.health.notAvailable" = "No disponible en este dispositivo";
+"settings.health.error" = "Error";
+"settings.health.simulatorWarning" = "HealthKit no está disponible en este dispositivo (no funciona en simulador ni en la mayoría de Macs).";
+
+"settings.permissions.title" = "Permisos";
+"settings.sync.all" = "Sincronizar ahora (todo)";
+"settings.sync.range" = "Sincronizar rango seleccionado";
+"settings.sync.lastSync" = "Último sync";
+"settings.sync.dateFilter" = "Filtrar por rango de fechas";
+"settings.sync.from" = "Desde";
+"settings.sync.to" = "Hasta";
+"settings.sync.dateFilter.hint" = "Se sincronizarán solo los workouts entre las fechas seleccionadas.";
+"settings.sync.background" = "Sincronización en background";
+"settings.sync.interval" = "Intervalo";
+
+"settings.sync.title" = "Sincronización";
+"settings.export.title" = "Exportar y compartir JSON (ad-hoc)";
+"settings.export.hint" = "Para exportar meses o rangos pre-calculados usá el Vault más abajo.";
+"settings.export.button" = "Exportar";
+"settings.export.agents" = "Tu agente puede consultar:";
+"settings.export.startApi" = "Iniciar API local";
+"settings.export.api.title" = "API para Agentes";
+
+"settings.about.title" = "Acerca de";
+"settings.about.version" = "Versión";
+"settings.about.dataModel" = "Modelo de datos";
+"settings.title" = "Ajustes";
+"settings.export.error" = "Error de exportación";
+
+"settings.filter.title" = "Filtrar exportación";
+"settings.filter.dateRange" = "Rango de fechas";
+"settings.filter.workoutTypes" = "Tipos de entrenamiento";
+"settings.filter.workoutTypes.hint" = "Dejá todos sin seleccionar para incluir todos los tipos.";
+"settings.filter.summaryOnly" = "Solo resumen (sin detalles)";
+"settings.filter.options" = "Opciones";
+"settings.filter.summaryOnly.hint" = "Solo exporta las estadísticas agregadas, sin la lista de workouts.";
+"settings.filter.cancel" = "Cancelar";
+"settings.filter.export" = "Exportar";
+
+/* Vault */
+"vault.title" = "Vault local";
+"vault.lastUpdate" = "Última actualización";
+"vault.autoRefresh" = "Refrescar automáticamente en background";
+"vault.status.local" = "Almacenamiento local";
+"vault.status.icloud" = "Local + iCloud Drive";
+"vault.status.localOnly" = "Solo local (sin iCloud)";
+"vault.availableMonths" = "Meses disponibles";
+"vault.empty" = "Vacío";
+"vault.empty.instruction" = "Sincronizá HealthKit primero. Después tocá Refrescar.";
+"vault.refresh" = "Refrescar ahora";
+"vault.share" = "Compartir carpeta";
+"vault.openFinder" = "Abrir en Finder";
+"vault.footer" = "El vault guarda un snapshot por mes en JSON. Se mantiene actualizado automáticamente y se espeja a iCloud Drive cuando estás logueado.";
+"vault.refresh.error" = "Error refrescando vault: %@";
+"vault.schedule.error" = "No se pudo programar background: %@";
+
+/* Workout List */
+"workouts.title" = "Entrenamientos";
+"workouts.empty" = "No hay entrenamientos";
+"workouts.empty.search" = "Probá cambiar la búsqueda";
+"workouts.empty.instruction" = "Sincronizá desde la pantalla principal";
+
+/* Errors */
+"error.export.data" = "No se pudieron leer los datos";
+"error.export.failed" = "Error al exportar: %@";
+"error.icloud.notConfigured" = "iCloud Drive no está configurado. Iniciá sesión en iCloud en Ajustes → [tu nombre] → iCloud.";
+"error.icloud.prepare" = "Error preparando archivo para exportar";
+"error.modelContainer" = "No se pudo inicializar ModelContainer: %@";
+"error.sync.failed" = "Sync falló: %@";
+"error.healthkit.notAuthorized" = "HealthKit no autorizado";
+"error.vault.noLocalRoot" = "Vault: no se pudo obtener Application Support";
+"error.vault.badMonth" = "Vault: mes inválido '%@'";
+
+/* HealthKit Descriptions (Info.plist) */
+"healthkit.share.description" = "Synctrackers necesita acceso a tus datos de entrenamiento para sincronizarlos con tus agentes de IA.";
+"healthkit.update.description" = "Synctrackers no escribe datos en HealthKit. Solo lee para mantener tu historial sincronizado.";
+"healthkit.clinical.description" = "Synctrackers no accede a registros clínicos.";

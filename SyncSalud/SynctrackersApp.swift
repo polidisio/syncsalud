@@ -6,9 +6,10 @@ import UIKit
 #endif
 
 @main
-struct SyncSaludApp: App {
+struct SynctrackersApp: App {
     @State private var healthService = HealthKitService()
     @State private var syncManager = HealthSyncManager()
+    @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
 
     let container: ModelContainer
 
@@ -26,7 +27,7 @@ struct SyncSaludApp: App {
 
             // CloudKit: sync automático entre iPhone y Mac via iCloud
             let configuration = ModelConfiguration(
-                cloudKitDatabase: .private("iCloud.com.saraiba.syncsalud.app")
+                cloudKitDatabase: .private("iCloud.com.saraiba.synctrackers")
             )
 
             container = try ModelContainer(for: schema, configurations: configuration)
@@ -37,13 +38,18 @@ struct SyncSaludApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            Group {
+                if hasCompletedOnboarding {
+                    ContentView()
+                        .onAppear { setupApp() }
+                } else {
+                    OnboardingView()
+                        .onAppear { setupAPIOnly() }
+                }
+            }
                 .modelContainer(container)
                 .environment(healthService)
                 .environment(syncManager)
-                .onAppear {
-                    setupApp()
-                }
         }
         #if os(macOS)
         .windowStyle(.titleBar)
@@ -51,26 +57,30 @@ struct SyncSaludApp: App {
         #endif
     }
 
+    /// Setup completo (HealthKit auth + sync) — solo tras onboarding
     private func setupApp() {
         Task {
-            // 1. Pedir autorización HealthKit
             await healthService.requestAuthorization()
 
-            // 2. Sincronizar al abrir (con throttle interno, no se hace más de 1 vez cada 5 min)
             if healthService.isAuthorized {
                 await syncManager.syncFromHealthKit()
             }
 
-            // 3. Iniciar API local solo en macOS
             #if os(macOS)
             LocalAPIServer.shared.start()
             #endif
 
-            // 4. Configurar export automático a iCloud Drive si está habilitado (iOS)
             #if os(iOS)
             await setupScheduledExportIfNeeded()
             #endif
         }
+    }
+
+    /// Setup mínimo durante onboarding — solo API local (macOS)
+    private func setupAPIOnly() {
+        #if os(macOS)
+        LocalAPIServer.shared.start()
+        #endif
     }
 
     #if os(iOS)

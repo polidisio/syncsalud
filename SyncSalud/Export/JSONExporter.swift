@@ -33,7 +33,7 @@ final class JSONExporter {
         guard let jsonData = buildExportJSON(records) else { return nil }
 
         do {
-            let fileName = "syncsalud_\(Int(Date().timeIntervalSince1970)).json"
+            let fileName = "synctrackers_\(Int(Date().timeIntervalSince1970)).json"
             let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
             let fileURL = documentsPath.appendingPathComponent(fileName)
 
@@ -80,8 +80,8 @@ final class JSONExporter {
 
         do {
             let fileName = summaryOnly
-                ? "syncsalud_resumen_\(Int(Date().timeIntervalSince1970)).json"
-                : "syncsalud_\(Int(Date().timeIntervalSince1970)).json"
+                ? "synctrackers_resumen_\(Int(Date().timeIntervalSince1970)).json"
+                : "synctrackers_\(Int(Date().timeIntervalSince1970)).json"
             let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
             let fileURL = documentsPath.appendingPathComponent(fileName)
 
@@ -135,7 +135,7 @@ final class JSONExporter {
         }
 
         // Guardar en Documents local para poder compartir via ShareSheet
-        let fileName = "syncsalud_\(Int(Date().timeIntervalSince1970)).json"
+        let fileName = "synctrackers_\(Int(Date().timeIntervalSince1970)).json"
         guard let fileURL = manager.prepareFileForSharing(fileName: fileName, jsonData: jsonData) else {
             lastExportError = "Error preparando archivo para exportar"
             return nil
@@ -171,7 +171,7 @@ final class JSONExporter {
         UserDefaults.standard.set(false, forKey: "scheduledExportEnabled")
         print("⏸️ Export automático deshabilitado")
         #if os(iOS)
-        BGTaskScheduler.shared.cancel(taskRequestWithIdentifier: "com.syncsalud.export")
+        BGTaskScheduler.shared.cancel(taskRequestWithIdentifier: "com.synctrackers.export")
         #endif
     }
 
@@ -200,7 +200,7 @@ final class JSONExporter {
             return
         }
 
-        let request = BGProcessingTaskRequest(identifier: "com.syncsalud.export")
+        let request = BGProcessingTaskRequest(identifier: "com.synctrackers.export")
         request.earliestBeginDate = Date(timeIntervalSinceNow: scheduledExportInterval)
         request.requiresNetworkConnectivity = true
         request.requiresExternalPower = false
@@ -257,7 +257,7 @@ final class JSONExporter {
 
         var exportDict: [String: Any] = [
             "exportedAt": formatter.string(from: Date()),
-            "source": "SyncSalud",
+            "source": "Synctrackers",
             "version": "1.0",
             "summary": [
                 "totalWorkouts": records.count,

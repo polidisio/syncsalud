@@ -13,17 +13,13 @@ struct SettingsView: View {
 
     @State private var isAuthorizing = false
 
-    // Date range filter for sync
     @State private var dateFilterEnabled = false
     @State private var syncFromDate = Calendar.current.date(byAdding: .month, value: -1, to: Date()) ?? Date()
     @State private var syncToDate = Date()
 
-    // Auto export — ahora vive dentro de VaultSectionView
-    // Share sheet
     @State private var shareItem: ShareItem?
     @State private var showShareSheet: Bool = false
 
-    // Export filter sheet
     @State private var showExportFilterSheet: Bool = false
     @State private var exportFromDate: Date = Calendar.current.date(byAdding: .month, value: -1, to: Date()) ?? Date()
     @State private var exportToDate: Date = Date()
@@ -31,28 +27,24 @@ struct SettingsView: View {
     @State private var exportSummaryOnly: Bool = false
     @State private var selectedWorkoutTypes: Set<String> = []
 
-    // iCloud status
     @State private var iCloudAvailable: Bool = false
-
-    // MARK: - Share Sheet Types (defined here so they're visible to the State vars above)
 
     struct ShareItem: Identifiable {
         let id = UUID()
         let url: URL
     }
 
-    // Workout types available for filtering
     private let workoutTypes = ["running", "cycling", "walking", "swimming", "hiking", "yoga", "other"]
 
     @ViewBuilder
     private var healthStatusView: some View {
         switch healthService.authorizationState {
         case .authorized:
-            Label("Conectado", systemImage: "checkmark.circle.fill")
+            Label("settings.health.connected", systemImage: "checkmark.circle.fill")
                 .foregroundStyle(.green)
                 .font(.caption)
         case .notRequested:
-            Button("Conectar") {
+            Button("settings.health.connect") {
                 isAuthorizing = true
                 Task {
                     await healthService.requestAuthorization()
@@ -70,11 +62,11 @@ struct SettingsView: View {
             }
         case .denied:
             HStack {
-                Label("Sin acceso", systemImage: "xmark.circle.fill")
+                Label("settings.health.noAccess", systemImage: "xmark.circle.fill")
                     .foregroundStyle(.red)
                     .font(.caption)
                 #if os(iOS)
-                Button("Abrir Ajustes") {
+                Button("settings.health.openSettings") {
                     if let url = URL(string: UIApplication.openSettingsURLString) {
                         UIApplication.shared.open(url)
                     }
@@ -84,12 +76,12 @@ struct SettingsView: View {
                 #endif
             }
         case .notAvailable:
-            Label("No disponible en este dispositivo", systemImage: "minus.circle.fill")
+            Label("settings.health.notAvailable", systemImage: "minus.circle.fill")
                 .foregroundStyle(.orange)
                 .font(.caption)
         case .error(let msg):
             VStack(alignment: .trailing) {
-                Label("Error", systemImage: "exclamationmark.triangle.fill")
+                Label("settings.health.error", systemImage: "exclamationmark.triangle.fill")
                     .foregroundStyle(.orange)
                     .font(.caption)
                 Text(msg)
@@ -102,7 +94,6 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             Form {
-                // MARK: - HealthKit
                 Section {
                     HStack {
                         Image(systemName: "heart.fill")
@@ -113,7 +104,7 @@ struct SettingsView: View {
                     }
 
                     if !healthService.isAvailable {
-                        Label("HealthKit no está disponible en este dispositivo (no funciona en simulador ni en la mayoría de Macs).", systemImage: "exclamationmark.triangle.fill")
+                        Label("settings.health.simulatorWarning", systemImage: "exclamationmark.triangle.fill")
                             .font(.caption)
                             .foregroundStyle(.orange)
                     }
@@ -124,12 +115,10 @@ struct SettingsView: View {
                             .foregroundStyle(.orange)
                     }
                 } header: {
-                    Text("Permisos")
+                    Text("settings.permissions.title")
                 }
 
-                // MARK: - Sincronización
                 Section {
-                    // Full sync button
                     Button {
                         Task {
                             if dateFilterEnabled {
@@ -141,7 +130,7 @@ struct SettingsView: View {
                     } label: {
                         HStack {
                             Image(systemName: "arrow.clockwise")
-                            Text(dateFilterEnabled ? "Sincronizar rango seleccionado" : "Sincronizar ahora (todo)")
+                            Text(dateFilterEnabled ? "settings.sync.range" : "settings.sync.all")
                             Spacer()
                             if syncManager.isSyncing {
                                 ProgressView()
@@ -152,38 +141,38 @@ struct SettingsView: View {
 
                     if let last = syncManager.lastSyncDate {
                         HStack {
-                            Text("Último sync")
+                            Text("settings.sync.lastSync")
                             Spacer()
                             Text(last, style: .relative)
                                 .foregroundStyle(.secondary)
                         }
                     }
 
-                    Toggle("Filtrar por rango de fechas", isOn: $dateFilterEnabled)
+                    Toggle("settings.sync.dateFilter", isOn: $dateFilterEnabled)
 
                     if dateFilterEnabled {
                         DatePicker(
-                            "Desde",
+                            "settings.sync.from",
                             selection: $syncFromDate,
                             displayedComponents: [.date]
                         )
                         .datePickerStyle(.compact)
 
                         DatePicker(
-                            "Hasta",
+                            "settings.sync.to",
                             selection: $syncToDate,
                             in: syncFromDate...Date(),
                             displayedComponents: [.date]
                         )
                         .datePickerStyle(.compact)
 
-                        Text("Se sincronizarán solo los workouts entre las fechas seleccionadas.")
+                        Text("settings.sync.dateFilter.hint")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
 
                     #if os(iOS)
-                    Toggle("Sincronización en background", isOn: $backgroundSyncEnabled)
+                    Toggle("settings.sync.background", isOn: $backgroundSyncEnabled)
                         .onChange(of: backgroundSyncEnabled) { _, newValue in
                             BackgroundSyncManager.shared.isBackgroundSyncEnabled = newValue
                         }
@@ -191,7 +180,7 @@ struct SettingsView: View {
                     if backgroundSyncEnabled {
                         VStack(alignment: .leading) {
                             HStack {
-                                Text("Intervalo")
+                                Text("settings.sync.interval")
                                 Spacer()
                                 Text("\(Int(syncIntervalHours))h")
                                     .foregroundStyle(.secondary)
@@ -204,10 +193,9 @@ struct SettingsView: View {
                     }
                     #endif
                 } header: {
-                    Text("Sincronización")
+                    Text("settings.sync.title")
                 }
 
-                // MARK: - Exportación
                 Section {
                     HStack {
                         Image(systemName: "folder")
@@ -224,29 +212,27 @@ struct SettingsView: View {
                     } label: {
                         HStack {
                             Image(systemName: "square.and.arrow.up")
-                            Text("Exportar y compartir JSON (ad-hoc)")
+                            Text("settings.export.adhoc")
                             Spacer()
                             Image(systemName: "line.3.horizontal.decrease.circle")
                                 .foregroundStyle(.secondary)
                         }
                     }
 
-                    Text("Para exportar meses o rangos pre-calculados usá el Vault más abajo.")
+                    Text("settings.export.hint")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 } header: {
-                    Text("Exportar")
+                    Text("settings.export.title")
                 }
 
-                // MARK: - Vault
                 VaultSectionView()
 
-                // MARK: - API Local (macOS)
                 #if os(macOS)
                 Section {
                     HStack {
                         Image(systemName: "network")
-                        Text("API Local")
+                        Text("dashboard.api.title")
                         Spacer()
                         Circle()
                             .fill(LocalAPIServer.shared.isRunning ? Color.green : Color.red)
@@ -255,7 +241,7 @@ struct SettingsView: View {
 
                     if LocalAPIServer.shared.isRunning {
                         VStack(alignment: .leading, spacing: 4) {
-                            Text("Tu agente puede consultar:")
+                            Text("settings.export.agents")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                             Text("• GET http://127.0.0.1:8080/v1/workouts")
@@ -272,7 +258,7 @@ struct SettingsView: View {
                                 .foregroundStyle(.secondary)
                         }
                     } else {
-                        Button("Iniciar API local") {
+                        Button("settings.export.startApi") {
                             LocalAPIServer.shared.configure(with: modelContext)
                             LocalAPIServer.shared.start()
                         }
@@ -284,36 +270,34 @@ struct SettingsView: View {
                             .foregroundStyle(.red)
                     }
                 } header: {
-                    Text("API para Agentes")
+                    Text("settings.export.api.title")
                 }
                 #endif
 
-                // MARK: - Información
                 Section {
                     HStack {
-                        Text("Versión")
+                        Text("settings.about.version")
                         Spacer()
                         Text("1.0.0")
                             .foregroundStyle(.secondary)
                     }
 
                     HStack {
-                        Text("Modelo de datos")
+                        Text("settings.about.dataModel")
                         Spacer()
                         Text("SwiftData + CloudKit")
                             .foregroundStyle(.secondary)
                             .font(.caption)
                     }
                 } header: {
-                    Text("Acerca de")
+                    Text("settings.about.title")
                 }
             }
-            .navigationTitle("Ajustes")
+            .navigationTitle("settings.title")
             .onAppear {
-                // Check iCloud availability
                 iCloudAvailable = FileManager.default.ubiquityIdentityToken != nil
             }
-            .alert("Error de exportación", isPresented: .constant(exportError != nil)) {
+            .alert("settings.export.error", isPresented: .constant(exportError != nil)) {
                 Button("OK", role: .cancel) { exportError = nil }
             } message: {
                 if let error = exportError {
@@ -345,8 +329,6 @@ struct SettingsView: View {
     }
 }
 
-// MARK: - Export Filter Sheet
-
 #if os(iOS)
 struct ExportFilterSheet: View {
     @Environment(\.dismiss) private var dismiss
@@ -366,17 +348,17 @@ struct ExportFilterSheet: View {
         NavigationStack {
             Form {
                 Section {
-                    Toggle("Filtrar por rango de fechas", isOn: $useDateFilter)
+                    Toggle("settings.filter.dateRange", isOn: $useDateFilter)
 
                     if useDateFilter {
-                        DatePicker("Desde", selection: $fromDate, displayedComponents: [.date])
+                        DatePicker("settings.sync.from", selection: $fromDate, displayedComponents: [.date])
                             .datePickerStyle(.compact)
 
-                        DatePicker("Hasta", selection: $toDate, in: fromDate...Date(), displayedComponents: [.date])
+                        DatePicker("settings.sync.to", selection: $toDate, in: fromDate...Date(), displayedComponents: [.date])
                             .datePickerStyle(.compact)
                     }
                 } header: {
-                    Text("Rango de fechas")
+                    Text("settings.filter.dateRange")
                 }
 
                 Section {
@@ -393,29 +375,29 @@ struct ExportFilterSheet: View {
                         ))
                     }
                 } header: {
-                    Text("Tipos de entrenamiento")
+                    Text("settings.filter.workoutTypes")
                 } footer: {
-                    Text("Dejá todos sin seleccionar para incluir todos los tipos.")
+                    Text("settings.filter.workoutTypes.hint")
                 }
 
                 Section {
-                    Toggle("Solo resumen (sin detalles)", isOn: $summaryOnly)
+                    Toggle("settings.filter.summaryOnly", isOn: $summaryOnly)
                 } header: {
-                    Text("Opciones")
+                    Text("settings.filter.options")
                 } footer: {
-                    Text("Solo exporta las estadísticas agregadas, sin la lista de workouts.")
+                    Text("settings.filter.summaryOnly.hint")
                 }
             }
-            .navigationTitle("Filtrar exportación")
+            .navigationTitle("settings.filter.title")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancelar") {
+                    Button("settings.filter.cancel") {
                         dismiss()
                     }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Exportar") {
+                    Button("settings.filter.export") {
                         performExport()
                         dismiss()
                     }
@@ -427,7 +409,6 @@ struct ExportFilterSheet: View {
     private func performExport() {
         let exporter = JSONExporter(context: modelContext)
 
-        // Determine filter parameters
         let from = useDateFilter ? fromDate : nil
         let to = useDateFilter ? toDate : nil
         let types = selectedWorkoutTypes.isEmpty ? nil : Array(selectedWorkoutTypes)
@@ -437,8 +418,6 @@ struct ExportFilterSheet: View {
     }
 }
 #endif
-
-// MARK: - Share Sheet (iOS)
 
 #if os(iOS)
 struct ShareSheet: UIViewControllerRepresentable {

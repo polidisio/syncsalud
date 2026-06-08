@@ -26,11 +26,11 @@
 		<true/>
 	</dict>
 	<key>NSHealthClinicalHealthRecordsShareUsageDescription</key>
-	<string>SyncSalud no accede a registros clínicos.</string>
+	<string>Synctrackers no accede a registros clínicos.</string>
 	<key>NSHealthShareUsageDescription</key>
-	<string>SyncSalud necesita acceso a tus datos de entrenamiento para sincronizarlos con tus agentes de IA.</string>
+	<string>Synctrackers necesita acceso a tus datos de entrenamiento para sincronizarlos con tus agentes de IA.</string>
 	<key>NSHealthUpdateUsageDescription</key>
-	<string>SyncSalud no escribe datos en HealthKit. Solo lee para mantener tu historial sincronizado.</string>
+	<string>Synctrackers no escribe datos en HealthKit. Solo lee para mantener tu historial sincronizado.</string>
 	<key>NSHumanReadableCopyright</key>
 	<string>Copyright © 2026. All rights reserved.</string>
 </dict>

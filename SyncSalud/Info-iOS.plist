@@ -4,17 +4,17 @@
 <dict>
 	<key>BGTaskSchedulerPermittedIdentifiers</key>
 	<array>
-		<string>com.syncsalud.sync</string>
-		<string>com.syncsalud.export</string>
+		<string>com.synctrackers.sync</string>
+		<string>com.synctrackers.export</string>
 	</array>
 	<key>NSUbiquitousContainers</key>
 	<dict>
-		<key>iCloud.com.saraiba.syncsalud.app</key>
+		<key>iCloud.com.saraiba.synctrackers</key>
 		<dict>
 			<key>NSUbiquitousContainerIsDocumentScopePublic</key>
 			<true/>
 			<key>NSUbiquitousContainerName</key>
-			<string>SyncSalud</string>
+			<string>Synctrackers</string>
 			<key>NSUbiquitousContainerSupportedFolderLevels</key>
 			<string>Any</string>
 		</dict>
@@ -38,9 +38,9 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSHealthShareUsageDescription</key>
-	<string>SyncSalud necesita acceso a tus datos de entrenamiento para sincronizarlos con tus agentes de IA.</string>
+	<string>Synctrackers necesita acceso a tus datos de entrenamiento para sincronizarlos con tus agentes de IA.</string>
 	<key>NSHealthUpdateUsageDescription</key>
-	<string>SyncSalud no escribe datos en HealthKit. Solo lee para mantener tu historial sincronizado.</string>
+	<string>Synctrackers no escribe datos en HealthKit. Solo lee para mantener tu historial sincronizado.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

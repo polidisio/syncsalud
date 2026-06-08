@@ -11,7 +11,7 @@ final class BackgroundSyncManager {
     static let shared = BackgroundSyncManager()
 
     #if os(iOS)
-    private let backgroundTaskID = "com.syncsalud.sync"
+    private let backgroundTaskID = "com.synctrackers.sync"
     #endif
 
     /// Intervalo mínimo entre sincronizaciones en background (en segundos)
@@ -61,12 +61,8 @@ final class BackgroundSyncManager {
         request.requiresNetworkConnectivity = false
         request.requiresExternalPower = false
 
-        do {
-            try BGTaskScheduler.shared.submit(request)
-            print("Background sync programada para: \(request.earliestBeginDate!)")
-        } catch {
-            print("Error al programar background sync: \(error.localizedDescription)")
-        }
+        try? BGTaskScheduler.shared.submit(request)
+        print("Background sync programada para: \(request.earliestBeginDate!)")
     }
 
     func cancelBackgroundTask() {
@@ -79,18 +75,12 @@ final class BackgroundSyncManager {
 
         // En background no podemos crear un HealthSyncManager fresco sin modelContext.
         // Solo marcamos que la app debería sincronizar al próximo abrir.
-        // El sync real ocurre al abrir la app por setupApp() en SyncSaludApp.
+        // El sync real ocurre al abrir la app por setupApp() en SynctrackersApp.
 
         // Hacer un sync "best effort" si hay datos en disco
         let operation = Task {
-            do {
-                // Intentar un sync rápido sin acceso a UI
-                let success = await BackgroundSyncHelper.performQuickSync()
-                task.setTaskCompleted(success: success)
-            } catch {
-                print("⚠️ Background sync falló: \(error.localizedDescription)")
-                task.setTaskCompleted(success: false)
-            }
+            let success = await BackgroundSyncHelper.performQuickSync()
+            task.setTaskCompleted(success: success)
         }
 
         task.expirationHandler = {
@@ -133,7 +123,7 @@ enum BackgroundSyncHelper {
         }
 
         do {
-            let (container, context) = try VaultManager.makeBackgroundContainer()
+            let context = try VaultManager.makeBackgroundContainer().context
 
             let syncManager = HealthSyncManager()
             syncManager.configure(with: context)
@@ -173,7 +163,7 @@ class SyncAppDelegate: NSObject, UIApplicationDelegate {
     }
 
     private func registerExportHandler() {
-        BGTaskScheduler.shared.register(forTaskWithIdentifier: "com.syncsalud.export", using: nil) { task in
+        BGTaskScheduler.shared.register(forTaskWithIdentifier: "com.synctrackers.export", using: nil) { task in
             self.handleExportTask(task as! BGProcessingTask)
         }
     }
@@ -216,18 +206,13 @@ enum JSONExporterDirect {
         let saved = UserDefaults.standard.double(forKey: "exportInterval")
         let interval = saved > 0 ? saved : 6 * 3600
 
-        let request = BGProcessingTaskRequest(identifier: "com.syncsalud.export")
+        let request = BGProcessingTaskRequest(identifier: "com.synctrackers.export")
         request.earliestBeginDate = Date(timeIntervalSinceNow: interval)
         request.requiresNetworkConnectivity = true
         request.requiresExternalPower = false
 
-        do {
-            try BGTaskScheduler.shared.submit(request)
-            print("📅 Export programado para: \(request.earliestBeginDate!)")
-        } catch {
-            print("⚠️ Error al programar export: \(error.localizedDescription)")
-        }
+        try? BGTaskScheduler.shared.submit(request)
+        print("📅 Export programado para: \(request.earliestBeginDate!)")
     }
 }
 #endif
-

@@ -12,7 +12,7 @@ struct WorkoutListView: View {
         #if os(iOS)
         NavigationStack {
             listContent
-                .navigationTitle("Entrenamientos")
+                .navigationTitle("workouts.title")
                 .navigationBarTitleDisplayMode(.large)
                 .searchable(text: $searchText, prompt: "Buscar por tipo")
                 .toolbar {
@@ -21,7 +21,7 @@ struct WorkoutListView: View {
         }
         #else
         listContent
-            .navigationTitle("Entrenamientos")
+            .navigationTitle("workouts.title")
             .toolbar {
                 toolbarSyncButton
             }
@@ -90,15 +90,15 @@ struct WorkoutListView: View {
             Image(systemName: "list.bullet.clipboard")
                 .font(.system(size: 64))
                 .foregroundStyle(.secondary)
-            Text("No hay entrenamientos")
+            Text("workouts.empty")
                 .font(.headline)
                 .foregroundStyle(.secondary)
             if !searchText.isEmpty {
-                Text("Probá cambiar la búsqueda")
+                Text("workouts.empty.search")
                     .font(.caption)
                     .foregroundStyle(.tertiary)
             } else {
-                Text("Sincronizá desde la pantalla principal")
+                Text("workouts.empty.instruction")
                     .font(.caption)
                     .foregroundStyle(.tertiary)
             }

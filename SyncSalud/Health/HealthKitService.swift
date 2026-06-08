@@ -21,16 +21,16 @@ final class HealthKitService {
     private(set) var isLoading = false
     private(set) var lastError: String?
 
-    /// Workout types que SyncSalud lee de HealthKit
+    /// Workout types que Synctrackers lee de HealthKit
     private let workoutTypesToRead: Set<HKWorkoutActivityType> = [
         .running, .cycling, .swimming, .walking, .hiking,
         .yoga, .traditionalStrengthTraining, .functionalStrengthTraining,
-        .danceInspiredTraining, .elliptical, .rowing, .stairClimbing,
+        .socialDance, .cardioDance, .barre, .pilates, .elliptical, .rowing, .stairClimbing,
         .pilates, .kickboxing, .surfingSports, .tennis,
         .soccer, .basketball, .other
     ]
 
-    /// Los tipos de cantidad que SyncSalud puede leer
+    /// Los tipos de cantidad que Synctrackers puede leer
     private var quantityTypesToRead: Set<HKQuantityType> {
         [
             HKQuantityType(.heartRate),
@@ -148,14 +148,14 @@ final class HealthKitService {
         let sortDescriptor = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: false)
 
         return await withCheckedContinuation { continuation in
+            let store = healthStore
             let query = HKSampleQuery(
                 sampleType: .workoutType(),
                 predicate: predicate,
                 limit: HKObjectQueryNoLimit,
                 sortDescriptors: [sortDescriptor]
             ) { _, samples, error in
-                if let error {
-                    self.lastError = "Error fetching workouts: \(error.localizedDescription)"
+                if error != nil {
                     continuation.resume(returning: [])
                     return
                 }
@@ -164,7 +164,7 @@ final class HealthKitService {
                 continuation.resume(returning: workouts)
             }
 
-            healthStore.execute(query)
+            store.execute(query)
         }
     }
 

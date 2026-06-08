@@ -4,8 +4,6 @@ import SwiftData
 import BackgroundTasks
 #endif
 
-/// Sección del vault embebida en Settings.
-/// Muestra el estado del vault (local + iCloud), los meses disponibles, y botones para refrescar / abrir la carpeta.
 struct VaultSectionView: View {
     @Environment(\.modelContext) private var modelContext
     @State private var index: VaultIndex?
@@ -30,14 +28,14 @@ struct VaultSectionView: View {
 
             if let lastRefresh = index?.lastRefresh, lastRefresh > .distantPast {
                 HStack {
-                    Text("Última actualización")
+                    Text("vault.lastUpdate")
                     Spacer()
                     Text(lastRefresh, style: .relative)
                         .foregroundStyle(.secondary)
                 }
             }
 
-            Toggle("Refrescar automáticamente en background", isOn: $vaultEnabled)
+            Toggle("vault.autoRefresh", isOn: $vaultEnabled)
                 .onChange(of: vaultEnabled) { _, newValue in
                     UserDefaults.standard.set(newValue, forKey: "vaultEnabled")
                     #if os(iOS)
@@ -63,9 +61,9 @@ struct VaultSectionView: View {
                     .foregroundStyle(.red)
             }
         } header: {
-            Text("Vault local")
+            Text("vault.title")
         } footer: {
-            Text("El vault guarda un snapshot por mes en JSON. Se mantiene actualizado automáticamente y se espeja a iCloud Drive cuando estás logueado.")
+            Text("vault.footer")
                 .font(.caption2)
         }
         #if os(iOS)
@@ -83,9 +81,9 @@ struct VaultSectionView: View {
             Image(systemName: "lock.shield.fill")
                 .foregroundStyle(.blue)
             VStack(alignment: .leading, spacing: 2) {
-                Text("Almacenamiento local")
+                Text("vault.status.local")
                     .font(.subheadline)
-                Text(iCloudMirroring ? "Local + iCloud Drive" : "Solo local (sin iCloud)")
+                Text(iCloudMirroring ? "vault.status.icloud" : "vault.status.localOnly")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -100,13 +98,13 @@ struct VaultSectionView: View {
     private func monthsList(months: [String]) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text("Meses disponibles")
+                Text("vault.availableMonths")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 Spacer()
                 #if os(iOS)
                 if editMode.isEditing && !selection.isEmpty {
-                    Button("Compartir \(selection.count)") {
+                    Button("Share \(selection.count)") {
                         shareSelectedMonths(months: months)
                     }
                     .font(.caption)
@@ -159,10 +157,10 @@ struct VaultSectionView: View {
 
     private var emptyState: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("Vacío")
+            Text("vault.empty")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
-            Text("Sincronizá HealthKit primero. Después tocá Refrescar.")
+            Text("vault.empty.instruction")
                 .font(.caption2)
                 .foregroundStyle(.secondary)
         }
@@ -173,7 +171,7 @@ struct VaultSectionView: View {
             Button {
                 Task { await refresh() }
             } label: {
-                Label("Refrescar ahora", systemImage: "arrow.clockwise")
+                Label("vault.refresh", systemImage: "arrow.clockwise")
             }
             .buttonStyle(.bordered)
             .disabled(isRefreshing)
@@ -181,12 +179,11 @@ struct VaultSectionView: View {
             Spacer()
 
             #if os(iOS)
-            // Solo visible antes del primer refresh — es una acción one-shot de setup.
             if isVaultEmpty {
                 Button {
                     shareVaultFolder()
                 } label: {
-                    Label("Compartir carpeta", systemImage: "square.and.arrow.up")
+                    Label("vault.share", systemImage: "square.and.arrow.up")
                 }
                 .buttonStyle(.bordered)
             }
@@ -194,7 +191,7 @@ struct VaultSectionView: View {
             Button {
                 _ = VaultManager.shared.openInFinder()
             } label: {
-                Label("Abrir en Finder", systemImage: "folder")
+                Label("vault.openFinder", systemImage: "folder")
             }
             .buttonStyle(.bordered)
             #endif
@@ -218,7 +215,7 @@ struct VaultSectionView: View {
             index = VaultManager.shared.loadIndex()
             iCloudMirroring = VaultManager.shared.isICloudMirroring
         } catch {
-            refreshError = "Error refrescando vault: \(error.localizedDescription)"
+            refreshError = String(format: "vault.refresh.error".localized(), error.localizedDescription)
         }
     }
 
@@ -257,19 +254,19 @@ struct VaultSectionView: View {
         guard vaultEnabled else { return }
         let saved = UserDefaults.standard.double(forKey: "exportInterval")
         let interval = saved > 0 ? saved : 6 * 3600
-        let request = BGProcessingTaskRequest(identifier: "com.syncsalud.export")
+        let request = BGProcessingTaskRequest(identifier: "com.synctrackers.export")
         request.earliestBeginDate = Date(timeIntervalSinceNow: interval)
         request.requiresNetworkConnectivity = true
         request.requiresExternalPower = false
         do {
             try BGTaskScheduler.shared.submit(request)
         } catch {
-            refreshError = "No se pudo programar background: \(error.localizedDescription)"
+            refreshError = String(format: "vault.schedule.error".localized(), error.localizedDescription)
         }
     }
 
     private func cancelBackgroundExport() {
-        BGTaskScheduler.shared.cancel(taskRequestWithIdentifier: "com.syncsalud.export")
+        BGTaskScheduler.shared.cancel(taskRequestWithIdentifier: "com.synctrackers.export")
     }
     #endif
 
@@ -282,7 +279,7 @@ struct VaultSectionView: View {
         guard let date = parser.date(from: ym) else { return ym }
         let display = DateFormatter()
         display.dateFormat = "LLLL yyyy"
-        display.locale = Locale(identifier: "es_AR")
+        display.locale = Locale.current
         return display.string(from: date).capitalized
     }
 

@@ -110,7 +110,7 @@ final class WorkoutRecord {
     /// Origen del dato
     var source: String = "healthkit"
 
-    /// UUID de HealthKit para deduplicación (índice, no unique)
+    /// UUID de HealthKit para deduplicación (índice, no unique — CloudKit no soporta unique constraints)
     var healthKitID: String? = nil
 
     /// Metadatos extras en JSON
@@ -243,7 +243,7 @@ extension HKWorkoutActivityType {
         case .yoga: return .yoga
         case .traditionalStrengthTraining: return .strength
         case .functionalStrengthTraining: return .functional
-        case .danceInspiredTraining: return .dancing
+        case .socialDance: return .dancing
         case .elliptical: return .elliptical
         case .rowing: return .rowing
         case .stairClimbing: return .stairClimbing

@@ -1,0 +1,139 @@
+/* Onboarding */
+"onboarding.welcome.title" = "Welcome to Synctrackers";
+"onboarding.welcome.subtitle" = "Sync your workouts from Apple Health\nto all your devices.";
+"onboarding.welcome.button" = "Get Started";
+
+"onboarding.health.title" = "Apple Health Access";
+"onboarding.health.description" = "Synctrackers needs to read your workouts\nto sync them and create backups.";
+"onboarding.health.reassurance" = "Read-only. We never modify your data.";
+"onboarding.health.grant" = "Grant Permission";
+"onboarding.health.skip" = "Skip";
+
+"onboarding.icloud.title" = "iCloud Sync";
+"onboarding.icloud.description" = "Your workouts are saved in iCloud\nand sync across your devices.";
+"onboarding.icloud.hint" = "Use the same Apple ID on all your devices.";
+"onboarding.icloud.understood" = "Got It";
+
+"onboarding.complete.title" = "Ready to Go";
+"onboarding.complete.subtitle" = "Your workouts will sync\nautomatically.";
+"onboarding.complete.button" = "Go to Dashboard";
+
+/* Dashboard */
+"dashboard.status.syncing" = "Syncing...";
+"dashboard.status.connected" = "Connected";
+"dashboard.status.noAccess" = "No Access";
+"dashboard.status.notConnected" = "Not Connected";
+"dashboard.status.notAvailable" = "Not Available";
+"dashboard.status.error" = "Error";
+
+"dashboard.summary.title" = "Summary";
+"dashboard.summary.today" = "Today";
+"dashboard.summary.workouts" = "workouts";
+"dashboard.summary.thisWeek" = "This Week";
+"dashboard.summary.calories" = "Calories";
+"dashboard.summary.calories.week" = "kcal this week";
+"dashboard.summary.duration" = "Duration";
+"dashboard.summary.duration.week" = "this week";
+
+"dashboard.streak.title" = "Streak";
+"dashboard.streak.current" = "Current";
+"dashboard.streak.longest" = "Longest";
+"dashboard.streak.today" = "You worked out today! 🔥";
+"dashboard.streak.lastWorkout" = "Last workout: %@";
+
+"dashboard.recent.title" = "Recent Workouts";
+"dashboard.api.title" = "Local API";
+"dashboard.api.active" = "Active on port 8080";
+"dashboard.api.inactive" = "Inactive";
+"dashboard.api.agents" = "Your agents can query:";
+
+"dashboard.empty.title" = "No Workouts";
+"dashboard.empty.instruction" = "Tap Sync or wait for the app to read your workouts from HealthKit";
+"dashboard.empty.button" = "Sync Now";
+"dashboard.empty.noPermissions" = "HealthKit Not Connected";
+"dashboard.empty.noPermissions.instruction" = "Go to Settings to connect HealthKit";
+"dashboard.unknown" = "unknown";
+
+/* Settings */
+"settings.health.connected" = "Connected";
+"settings.health.connect" = "Connect";
+"settings.health.noAccess" = "No Access";
+"settings.health.openSettings" = "Open Settings";
+"settings.health.notAvailable" = "Not available on this device";
+"settings.health.error" = "Error";
+"settings.health.simulatorWarning" = "HealthKit is not available on this device (doesn't work on simulator or most Macs).";
+
+"settings.permissions.title" = "Permissions";
+"settings.sync.all" = "Sync Now (all)";
+"settings.sync.range" = "Sync selected range";
+"settings.sync.lastSync" = "Last sync";
+"settings.sync.dateFilter" = "Filter by date range";
+"settings.sync.from" = "From";
+"settings.sync.to" = "To";
+"settings.sync.dateFilter.hint" = "Only workouts between selected dates will be synced.";
+"settings.sync.background" = "Background sync";
+"settings.sync.interval" = "Interval";
+
+"settings.sync.title" = "Sync";
+"settings.export.title" = "Export";
+"settings.export.adhoc" = "Export and Share JSON (ad-hoc)";
+"settings.export.hint" = "To export pre-calculated months or ranges, use the Vault below.";
+"settings.export.button" = "Export";
+"settings.export.agents" = "Your agent can query:";
+"settings.export.startApi" = "Start Local API";
+"settings.export.api.title" = "API for Agents";
+
+"settings.about.title" = "About";
+"settings.about.version" = "Version";
+"settings.about.dataModel" = "Data Model";
+"settings.title" = "Settings";
+"settings.export.error" = "Export Error";
+
+"settings.filter.title" = "Filter Export";
+"settings.filter.dateRange" = "Date Range";
+"settings.filter.workoutTypes" = "Workout Types";
+"settings.filter.workoutTypes.hint" = "Leave all unselected to include all types.";
+"settings.filter.summaryOnly" = "Summary only (no details)";
+"settings.filter.options" = "Options";
+"settings.filter.summaryOnly.hint" = "Only exports aggregated statistics, without the workout list.";
+"settings.filter.cancel" = "Cancel";
+"settings.filter.export" = "Export";
+
+/* Vault */
+"vault.title" = "Local Vault";
+"vault.lastUpdate" = "Last Update";
+"vault.autoRefresh" = "Auto-refresh in background";
+"vault.status.local" = "Local Storage";
+"vault.status.icloud" = "Local + iCloud Drive";
+"vault.status.localOnly" = "Local only (no iCloud)";
+"vault.availableMonths" = "Available Months";
+"vault.empty" = "Empty";
+"vault.empty.instruction" = "Sync HealthKit first. Then tap Refresh.";
+"vault.refresh" = "Refresh Now";
+"vault.share" = "Share Folder";
+"vault.openFinder" = "Open in Finder";
+"vault.footer" = "The vault saves a monthly JSON snapshot. It stays updated automatically and mirrors to iCloud Drive when you're logged in.";
+"vault.refresh.error" = "Error refreshing vault: %@";
+"vault.schedule.error" = "Could not schedule background: %@";
+
+/* Workout List */
+"workouts.title" = "Workouts";
+"workouts.empty" = "No Workouts";
+"workouts.empty.search" = "Try changing your search";
+"workouts.empty.instruction" = "Sync from the main screen";
+
+/* Errors */
+"error.export.data" = "Could not read data";
+"error.export.failed" = "Export failed: %@";
+"error.icloud.notConfigured" = "iCloud Drive is not configured. Sign in to iCloud in Settings → [your name] → iCloud.";
+"error.icloud.prepare" = "Error preparing file for export";
+"error.modelContainer" = "Could not initialize ModelContainer: %@";
+"error.sync.failed" = "Sync failed: %@";
+"error.healthkit.notAuthorized" = "HealthKit not authorized";
+"error.vault.noLocalRoot" = "Vault: could not get Application Support";
+"error.vault.badMonth" = "Vault: invalid month '%@'";
+
+/* HealthKit Descriptions (Info.plist) */
+"healthkit.share.description" = "Synctrackers needs access to your workout data to sync with your AI agents.";
+"healthkit.update.description" = "Synctrackers does not write data to HealthKit. It only reads to keep your history synced.";
+"healthkit.clinical.description" = "Synctrackers does not access clinical records.";

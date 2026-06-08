@@ -12,7 +12,7 @@ final class LocalAPIServer {
     static let shared = LocalAPIServer()
 
     private var listener: NWListener?
-    private let queue = DispatchQueue(label: "com.syncsalud.api", qos: .background)
+    private let queue = DispatchQueue(label: "com.synctrackers.api", qos: .background)
     private let port: UInt16 = 8080
 
     private var modelContext: ModelContext?
@@ -353,7 +353,7 @@ final class LocalAPIServer {
         let dates = records.compactMap(\.startDate).sorted()
         let export: [String: Any] = [
             "exportedAt": ISO8601DateFormatter().string(from: Date()),
-            "source": "SyncSalud",
+            "source": "Synctrackers",
             "version": "1.0",
             "workoutCount": records.count,
             "dateRange": [
@@ -367,7 +367,7 @@ final class LocalAPIServer {
             .flatMap { String(data: $0, encoding: .utf8) } ?? "{}"
 
         return httpResponse(status: 200, body: json, contentType: "application/json",
-                            headers: ["Content-Disposition": "attachment; filename=syncsalud_export.json"])
+                            headers: ["Content-Disposition": "attachment; filename=synctrackers_export.json"])
     }
 
     // MARK: - Helpers
@@ -475,7 +475,7 @@ final class LocalAPIServer {
         var allHeaders = headers
         allHeaders["Content-Type"] = contentType
         allHeaders["Content-Length"] = "\(body.utf8.count)"
-        allHeaders["Access-Control-Allow-Origin"] = "*"
+        allHeaders["Access-Control-Allow-Origin"] = "null"
         allHeaders["Connection"] = "close"
 
         let headerString = allHeaders.map { "\($0.key): \($0.value)" }.joined(separator: "\r\n")

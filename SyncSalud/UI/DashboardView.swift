@@ -81,7 +81,7 @@ struct DashboardView: View {
                     HStack(spacing: 6) {
                         ProgressView()
                             .scaleEffect(0.8)
-                        Text("Sincronizando...")
+                        Text("dashboard.status.syncing")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -97,24 +97,24 @@ struct DashboardView: View {
         Group {
             switch healthService.authorizationState {
             case .authorized:
-                Label("Conectado", systemImage: "checkmark.circle.fill")
+                Label("dashboard.status.connected", systemImage: "checkmark.circle.fill")
                     .foregroundStyle(.green)
                     .font(.caption)
                     .labelStyle(.titleAndIcon)
             case .denied:
-                Label("Sin acceso", systemImage: "xmark.circle.fill")
+                Label("dashboard.status.noAccess", systemImage: "xmark.circle.fill")
                     .foregroundStyle(.red)
                     .font(.caption)
             case .notRequested:
-                Label("No conectado", systemImage: "questionmark.circle.fill")
+                Label("dashboard.status.notConnected", systemImage: "questionmark.circle.fill")
                     .foregroundStyle(.orange)
                     .font(.caption)
             case .notAvailable:
-                Label("No disponible", systemImage: "minus.circle.fill")
+                Label("dashboard.status.notAvailable", systemImage: "minus.circle.fill")
                     .foregroundStyle(.orange)
                     .font(.caption)
             case .error:
-                Label("Error", systemImage: "exclamationmark.triangle.fill")
+                Label("dashboard.status.error", systemImage: "exclamationmark.triangle.fill")
                     .foregroundStyle(.orange)
                     .font(.caption)
             }
@@ -125,35 +125,34 @@ struct DashboardView: View {
 
     private var summarySection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            sectionHeader("Resumen", systemImage: "chart.bar.fill")
+            sectionHeader("dashboard.summary.title", systemImage: "chart.bar.fill")
 
-            // 2 columnas en iPhone, 4 en pantallas grandes
             LazyVGrid(columns: gridColumns, spacing: 12) {
                 summaryCard(
-                    title: "Hoy",
+                    title: "dashboard.summary.today",
                     value: "\(todayWorkouts.count)",
-                    subtitle: "entrenamientos",
+                    subtitle: "dashboard.summary.workouts",
                     icon: "figure.run",
                     color: .blue
                 )
                 summaryCard(
-                    title: "Esta semana",
+                    title: "dashboard.summary.thisWeek",
                     value: "\(weekWorkouts.count)",
-                    subtitle: "entrenamientos",
+                    subtitle: "dashboard.summary.workouts",
                     icon: "calendar",
                     color: .green
                 )
                 summaryCard(
-                    title: "Calorías",
+                    title: "dashboard.summary.calories",
                     value: "\(Int(weekCalories))",
-                    subtitle: "kcal esta semana",
+                    subtitle: "dashboard.summary.calories.week",
                     icon: "flame.fill",
                     color: .orange
                 )
                 summaryCard(
-                    title: "Tiempo",
+                    title: "dashboard.summary.duration",
                     value: weekDurationFormatted,
-                    subtitle: "esta semana",
+                    subtitle: "dashboard.summary.duration.week",
                     icon: "clock.fill",
                     color: .purple
                 )
@@ -198,19 +197,19 @@ struct DashboardView: View {
 
     private var streakSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            sectionHeader("Racha", systemImage: "flame.fill", tint: .orange)
+            sectionHeader("dashboard.streak.title", systemImage: "flame.fill", tint: .orange)
 
             HStack(spacing: 16) {
-                StreakBadge(value: streak.current, label: "Actual")
-                StreakBadge(value: streak.longest, label: "Máxima")
+                StreakBadge(value: streak.current, label: "dashboard.streak.current")
+                StreakBadge(value: streak.longest, label: "dashboard.streak.longest")
             }
 
             if streak.isActiveToday {
-                Label("¡Entrenaste hoy! 🔥", systemImage: "star.fill")
+                Label("dashboard.streak.today", systemImage: "star.fill")
                     .font(.subheadline)
                     .foregroundStyle(.orange)
             } else if !workouts.isEmpty {
-                Text("Último entrenamiento: \(lastWorkoutDate)")
+                Text(String(format: "dashboard.streak.lastWorkout".localized(), lastWorkoutDate))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -245,7 +244,7 @@ struct DashboardView: View {
 
     private var recentWorkoutsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            sectionHeader("Últimos entrenamientos", systemImage: "clock.arrow.circlepath")
+            sectionHeader("dashboard.recent.title", systemImage: "clock.arrow.circlepath")
 
             ForEach(recentWorkouts.prefix(5)) { workout in
                 WorkoutRowCompact(workout: workout)
@@ -264,18 +263,18 @@ struct DashboardView: View {
     #if os(macOS)
     private var apiInfoCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            sectionHeader("API Local", systemImage: "network", tint: .blue)
+            sectionHeader("dashboard.api.title", systemImage: "network", tint: .blue)
 
             HStack {
                 Circle()
                     .fill(LocalAPIServer.shared.isRunning ? Color.green : Color.red)
                     .frame(width: 10, height: 10)
-                Text(LocalAPIServer.shared.isRunning ? "Activa en puerto 8080" : "Inactiva")
+                Text(LocalAPIServer.shared.isRunning ? "dashboard.api.active" : "dashboard.api.inactive")
                     .font(.subheadline)
             }
 
             VStack(alignment: .leading, spacing: 4) {
-                Text("Tus agentes pueden consultar:")
+                Text("dashboard.api.agents")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 Text("• GET /v1/workouts")
@@ -302,10 +301,10 @@ struct DashboardView: View {
             Image(systemName: "figure.run")
                 .font(.system(size: 64))
                 .foregroundStyle(.secondary)
-            Text("No hay entrenamientos")
+            Text("dashboard.empty.title")
                 .font(.headline)
                 .foregroundStyle(.secondary)
-            Text("Tocá Sincronizar o esperá a que la app lea tus workouts de HealthKit")
+            Text("dashboard.empty.instruction")
                 .font(.caption)
                 .foregroundStyle(.tertiary)
                 .multilineTextAlignment(.center)
@@ -316,7 +315,7 @@ struct DashboardView: View {
                     isSyncing = false
                 }
             } label: {
-                Label("Sincronizar ahora", systemImage: "arrow.clockwise")
+                Label("dashboard.empty.button", systemImage: "arrow.clockwise")
                     .font(.headline)
             }
             .buttonStyle(.borderedProminent)
@@ -332,10 +331,10 @@ struct DashboardView: View {
             Image(systemName: "heart.slash")
                 .font(.system(size: 64))
                 .foregroundStyle(.secondary)
-            Text("HealthKit no conectado")
+            Text("dashboard.empty.noPermissions")
                 .font(.headline)
                 .foregroundStyle(.secondary)
-            Text("Andá a Ajustes para conectar HealthKit")
+            Text("dashboard.empty.noPermissions.instruction")
                 .font(.caption)
                 .foregroundStyle(.tertiary)
         }
@@ -345,11 +344,11 @@ struct DashboardView: View {
 
     // MARK: - Helpers
 
-    private func sectionHeader(_ title: String, systemImage: String, tint: Color = .primary) -> some View {
+    private func sectionHeader(_ titleKey: String, systemImage: String, tint: Color = .primary) -> some View {
         HStack(spacing: 8) {
             Image(systemName: systemImage)
                 .foregroundStyle(tint)
-            Text(title)
+            Text(titleKey)
                 .font(.headline)
         }
     }
@@ -424,7 +423,7 @@ struct DashboardView: View {
 
     private var lastWorkoutDate: String {
         guard let last = workouts.max(by: { $0.startDate < $1.startDate }) else {
-            return "desconocido"
+            return "dashboard.unknown".localized()
         }
         return last.startDate.formatted(date: .abbreviated, time: .omitted)
     }

@@ -1,4 +1,4 @@
-name: SyncSalud
+name: Synctrackers
 options:
   bundleIdPrefix: com.saraiba
   deploymentTarget:
@@ -22,7 +22,7 @@ settings:
     CURRENT_PROJECT_VERSION: "1"
 
 targets:
-  SyncSalud iOS:
+  Synctrackers iOS:
     type: application
     platform: iOS
     sources:
@@ -33,16 +33,18 @@ targets:
           - "*.entitlements"
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.saraiba.syncsalud.app
+        PRODUCT_BUNDLE_IDENTIFIER: com.saraiba.synctrackers
+        PRODUCT_NAME: Synctrackers
         INFOPLIST_FILE: SyncSalud/Info-iOS.plist
-        CODE_SIGN_ENTITLEMENTS: SyncSalud/SyncSalud-iOS.entitlements
+        CODE_SIGN_ENTITLEMENTS: SyncSalud/Synctrackers-iOS.entitlements
         TARGETED_DEVICE_FAMILY: "1,2"
         SUPPORTS_MACCATALYST: NO
         GENERATE_INFOPLIST_FILE: NO
         ENABLE_PREVIEWS: NO
         SWIFT_EMIT_LOC_STRINGS: NO
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
 
-  SyncSaludMac:
+  SynctrackersMac:
     type: application
     platform: macOS
     sources:
@@ -52,9 +54,11 @@ targets:
           - "*.entitlements"
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.saraiba.syncsalud.mac
+        PRODUCT_BUNDLE_IDENTIFIER: com.saraiba.synctrackers.mac
+        PRODUCT_NAME: Synctrackers
         INFOPLIST_FILE: SyncSalud/Info-macOS.plist
-        CODE_SIGN_ENTITLEMENTS: SyncSalud/SyncSalud-macOS.entitlements
+        CODE_SIGN_ENTITLEMENTS: SyncSalud/Synctrackers-macOS.entitlements
         ENABLE_HARDENED_RUNTIME: YES
         COMBINE_HIDPI_IMAGES: YES
         GENERATE_INFOPLIST_FILE: NO
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon

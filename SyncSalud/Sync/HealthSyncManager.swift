@@ -125,7 +125,7 @@ final class HealthSyncManager {
 
         // 6. Mapear y filtrar duplicados
         var newCount = 0
-        var updateCount = 0
+        let updateCount = 0
         var skipCount = 0
 
         for (index, hkWorkout) in workouts.enumerated() {
@@ -159,7 +159,9 @@ final class HealthSyncManager {
                 do {
                     try modelContext.save()
                 } catch {
-                    print("⚠️ Error en save parcial: \(error.localizedDescription)")
+                    let msg = "Error en save parcial: \(error.localizedDescription)"
+                    print("⚠️ \(msg)")
+                    logSync(type: SyncLog.SyncType.healthKitImport, count: newCount, success: false, error: msg)
                 }
             }
 

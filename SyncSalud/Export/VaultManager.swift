@@ -7,12 +7,12 @@ import UIKit
 import AppKit
 #endif
 
-/// Manager del vault local de SyncSalud.
+/// Manager del vault local de Synctrackers.
 ///
-/// Mantiene un folder estructurado en `Application Support/SyncSalud/Vault/` con un snapshot
+/// Mantiene un folder estructurado en `Application Support/Synctrackers/Vault/` con un snapshot
 /// por mes (`vault-YYYY-MM.json`) más un `index.json` que actúa de manifiesto. En iOS, si el
 /// usuario está logueado en iCloud, cada snapshot se espeja al container de iCloud Documents
-/// (el usuario lo ve en Files.app como `iCloud Drive → SyncSalud → Vault → snapshots → …`).
+/// (el usuario lo ve en Files.app como `iCloud Drive → Synctrackers → Vault → snapshots → …`).
 ///
 /// Estrategia:
 /// - Dual write (local + iCloud) — el local es autoritativo; si iCloud falla, log + continuar
@@ -259,7 +259,7 @@ final class VaultManager {
     static func makeBackgroundContainer() throws -> (container: ModelContainer, context: ModelContext) {
         let schema = Schema([WorkoutRecord.self, WorkoutMetric.self, SyncLog.self])
         let config = ModelConfiguration(
-            cloudKitDatabase: .private("iCloud.com.saraiba.syncsalud.app")
+            cloudKitDatabase: .private("iCloud.com.saraiba.synctrackers")
         )
         let container = try ModelContainer(for: schema, configurations: config)
         let context = ModelContext(container)
