@@ -197,16 +197,6 @@ struct SettingsView: View {
                 }
 
                 Section {
-                    HStack {
-                        Image(systemName: "folder")
-                            .foregroundStyle(.secondary)
-                        Text("Carpeta en iCloud Drive")
-                        Spacer()
-                        TextField("SyncSalud", text: $iCloudFolderName)
-                            .multilineTextAlignment(.trailing)
-                            .frame(maxWidth: 160)
-                    }
-
                     Button {
                         showExportFilterSheet = true
                     } label: {
