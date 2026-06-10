@@ -15,10 +15,11 @@ import AppKit
 /// (el usuario lo ve en Files.app como `iCloud Drive → Synctrackers → Vault → snapshots → …`).
 ///
 /// Estrategia:
-/// - Dual write (local + iCloud) — el local es autoritativo; si iCloud falla, log + continuar
+/// - Dual write (local + iCloud) — el local es autoritativo; si iCloud falla, reintenta 3x con backoff
 /// - Idempotente: la BG task reescribe solo los meses cuyo `lastUpdatedAt` cambió
 /// - Writes atómicos via `.tmp` + rename POSIX para sobrevivir crashes
 /// - No usa `setUbiquitous` — escribe directo al path del ubiquity container
+@Observable
 final class VaultManager {
     static let shared = VaultManager()
 
@@ -70,6 +71,9 @@ final class VaultManager {
     }
 
     var isICloudMirroring: Bool { iCloudSnapshotsURL != nil }
+
+    private(set) var lastICloudError: String?
+    private(set) var lastICloudSyncDate: Date?
 
     // MARK: - Index
 
@@ -202,7 +206,7 @@ final class VaultManager {
             }
 
             do {
-                try writeSnapshot(yearMonth: ym, data: jsonData)
+                try await writeSnapshot(yearMonth: ym, data: jsonData)
                 let size = jsonData.count
                 let range: VaultRecordRange
                 if let first = records.map(\.startDate).min(), let last = records.map(\.startDate).max() {
@@ -236,7 +240,7 @@ final class VaultManager {
         )
         let records = (try? modelContext.fetch(descriptor)) ?? []
         guard let jsonData = buildMonthJSON(month: yearMonth, records: records) else { return nil }
-        try writeSnapshot(yearMonth: yearMonth, data: jsonData)
+        try await writeSnapshot(yearMonth: yearMonth, data: jsonData)
 
         var index = loadIndex() ?? .empty()
         let latest = records.map(\.updatedAt).max() ?? .distantPast
@@ -272,7 +276,7 @@ final class VaultManager {
         return JSONExporter.buildJSONData(records: records, summaryOnly: false, month: month)
     }
 
-    private func writeSnapshot(yearMonth: String, data: Data) throws {
+    private func writeSnapshot(yearMonth: String, data: Data) async throws {
         guard let localSnapshots = localSnapshotsURL else { throw VaultError.noLocalRoot }
         let finalURL = localSnapshots.appendingPathComponent("vault-\(yearMonth).json")
         let tmpURL = localSnapshots.appendingPathComponent("vault-\(yearMonth).json.tmp")
@@ -285,19 +289,35 @@ final class VaultManager {
             try fm.moveItem(at: tmpURL, to: finalURL)
         }
 
-        // iCloud mirror (best-effort)
+        // iCloud mirror con reintentos (backoff 1s / 2s / 4s)
         if let iCloudSnapshots = iCloudSnapshotsURL {
-            let iCloudFinal = iCloudSnapshots.appendingPathComponent("vault-\(yearMonth).json")
-            let iCloudTmp = iCloudSnapshots.appendingPathComponent("vault-\(yearMonth).json.tmp")
+            await writeICloudWithRetry(data: data, yearMonth: yearMonth, to: iCloudSnapshots)
+        }
+    }
+
+    private func writeICloudWithRetry(data: Data, yearMonth: String, to iCloudSnapshots: URL) async {
+        let finalURL = iCloudSnapshots.appendingPathComponent("vault-\(yearMonth).json")
+        let tmpURL = iCloudSnapshots.appendingPathComponent("vault-\(yearMonth).json.tmp")
+
+        for attempt in 0..<3 {
             do {
-                try data.write(to: iCloudTmp, options: .atomic)
-                if fm.fileExists(atPath: iCloudFinal.path) {
-                    _ = try fm.replaceItemAt(iCloudFinal, withItemAt: iCloudTmp)
+                try data.write(to: tmpURL, options: .atomic)
+                if fm.fileExists(atPath: finalURL.path) {
+                    _ = try fm.replaceItemAt(finalURL, withItemAt: tmpURL)
                 } else {
-                    try fm.moveItem(at: iCloudTmp, to: iCloudFinal)
+                    try fm.moveItem(at: tmpURL, to: finalURL)
                 }
+                lastICloudError = nil
+                lastICloudSyncDate = Date()
+                return
             } catch {
-                print("Vault: mirror iCloud falló para \(yearMonth): \(error.localizedDescription)")
+                if attempt < 2 {
+                    let delay = UInt64(pow(2.0, Double(attempt))) * 1_000_000_000
+                    try? await Task.sleep(nanoseconds: delay)
+                } else {
+                    lastICloudError = error.localizedDescription
+                    print("Vault: mirror iCloud falló para \(yearMonth) tras 3 intentos: \(error.localizedDescription)")
+                }
             }
         }
     }
@@ -344,10 +364,11 @@ final class VaultManager {
     /// Calcula el rango (from, to) de meses con datos, en formato "YYYY-MM".
     /// Devuelve nil si no hay workouts.
     private func computeMonthBounds(modelContext: ModelContext) throws -> (from: String, to: String)? {
-        let descriptor = FetchDescriptor<WorkoutRecord>(
+        var descriptor = FetchDescriptor<WorkoutRecord>(
             sortBy: [SortDescriptor(\.startDate, order: .forward)]
         )
-        guard let all = try? modelContext.fetch(descriptor), let first = all.first?.startDate else {
+        descriptor.fetchLimit = 1
+        guard let first = (try? modelContext.fetch(descriptor))?.first?.startDate else {
             return nil
         }
         let now = Date()

@@ -41,7 +41,6 @@ final class HealthSyncManager {
     ///   - force: Si true, ignora el throttle de 5 minutos y el límite de primer año
     ///   - from: Fecha de inicio del rango a sincronizar (nil = automático)
     ///   - to: Fecha de fin del rango a sincronizar (nil = ahora)
-    @MainActor
     func syncFromHealthKit(force: Bool = false, from: Date? = nil, to: Date? = nil) async {
         guard !isSyncing else {
             print("⚠️ Sync ya en progreso, ignorando...")
@@ -49,30 +48,34 @@ final class HealthSyncManager {
         }
 
         guard let modelContext else {
-            lastError = "ModelContext no configurado"
+            await MainActor.run { lastError = "ModelContext no configurado" }
             return
         }
 
-        // Throttle: si el último sync completó hace menos de 5 minutos, no hacer nada
-        // (excepto si force=true)
         if !force, let lastSync = lastCompletedSync, Date().timeIntervalSince(lastSync) < 300 {
             print("⏸️ Sync reciente (\(Int(Date().timeIntervalSince(lastSync)))s), saltando")
             return
         }
 
-        isSyncing = true
-        syncProgress = 0
-        lastError = nil
+        await MainActor.run {
+            isSyncing = true
+            syncProgress = 0
+            lastError = nil
+        }
         defer {
-            isSyncing = false
-            syncProgress = 1.0
+            Task { @MainActor in
+                isSyncing = false
+                syncProgress = 1.0
+            }
         }
 
         // 1. Asegurar autorización
         await healthService.requestAuthorization()
         guard healthService.isAuthorized else {
-            lastError = "HealthKit no autorizado"
-            logSync(type: SyncLog.SyncType.healthKitImport, count: 0, success: false, error: lastError)
+            await MainActor.run {
+                lastError = "HealthKit no autorizado"
+            }
+            logSync(type: SyncLog.SyncType.healthKitImport, count: 0, success: false, error: "HealthKit no autorizado")
             return
         }
 
@@ -99,7 +102,7 @@ final class HealthSyncManager {
             toDate = Date()
         }
 
-        syncProgress = 0.1
+        await MainActor.run { syncProgress = 0.1 }
 
         // 3. Limpiar duplicados existentes antes de empezar
         if from == nil && to == nil { // solo en sync automático, no en filtro manual
@@ -108,7 +111,7 @@ final class HealthSyncManager {
 
         // 4. Fetch workouts desde HealthKit
         let workouts = await healthService.fetchWorkouts(from: fromDate, to: toDate)
-        syncProgress = 0.3
+        await MainActor.run { syncProgress = 0.3 }
 
         print("📊 HealthKit devolvió \(workouts.count) workouts desde \(fromDate?.description ?? "inicio")")
 
@@ -120,12 +123,11 @@ final class HealthSyncManager {
         }
 
         // 5. Obtener healthKitIDs existentes para deduplicación
-        let existingIDs = fetchExistingHealthKitIDs(context: modelContext)
-        syncProgress = 0.4
+        var existingIDs = fetchExistingHealthKitIDs(context: modelContext)
+        await MainActor.run { syncProgress = 0.4 }
 
         // 6. Mapear y filtrar duplicados
         var newCount = 0
-        let updateCount = 0
         var skipCount = 0
 
         for (index, hkWorkout) in workouts.enumerated() {
@@ -147,12 +149,8 @@ final class HealthSyncManager {
             }
 
             modelContext.insert(record)
+            existingIDs.insert(hkID)
             newCount += 1
-
-            // Agregar a existingIDs para evitar duplicados dentro del mismo sync
-            // (importante si hay workouts con el mismo UUID por algún motivo)
-            // Nota: esto no funciona porque existingIDs es let. Usamos un set local:
-            // (Workaround: lo manejamos via dedup al final)
 
             // Guardar progreso cada 50 inserts
             if newCount % 50 == 0 {
@@ -165,23 +163,39 @@ final class HealthSyncManager {
                 }
             }
 
-            syncProgress = 0.4 + (Double(index) / Double(workouts.count)) * 0.5
+            let progress = 0.4 + (Double(index) / Double(workouts.count)) * 0.5
+            await MainActor.run { syncProgress = progress }
         }
 
         // 7. Guardar final
         do {
             try modelContext.save()
-            lastSyncDate = Date()
-            lastCompletedSync = Date()
+            let now = Date()
+            let finalCount = newCount
+            lastCompletedSync = now
             hasDoneInitialSync = true
-            lastSyncCount = newCount + updateCount
-            syncProgress = 1.0
-
-            logSync(type: SyncLog.SyncType.healthKitImport, count: newCount, success: true)
-            print("✅ Sync completado: \(newCount) nuevos, \(updateCount) actualizados, \(skipCount) ya existían")
+            await MainActor.run {
+                lastSyncDate = now
+                lastSyncCount = finalCount
+                syncProgress = 1.0
+            }
+            logSync(type: SyncLog.SyncType.healthKitImport, count: finalCount, success: true)
+            print("✅ Sync completado: \(finalCount) nuevos, \(skipCount) ya existían")
+            if finalCount > 0 {
+                Task {
+                    do {
+                        let vaultResult = try await VaultManager.shared.refreshAll(modelContext: modelContext)
+                        print("📦 Vault refreshed: \(vaultResult.monthsWritten.count) months written")
+                    } catch {
+                        print("⚠️ Vault refresh failed: \(error.localizedDescription)")
+                    }
+                }
+            }
         } catch {
-            lastError = "Error al guardar: \(error.localizedDescription)"
-            logSync(type: SyncLog.SyncType.healthKitImport, count: newCount, success: false, error: lastError)
+            let msg = "Error al guardar: \(error.localizedDescription)"
+            let finalCount = newCount
+            await MainActor.run { lastError = msg }
+            logSync(type: SyncLog.SyncType.healthKitImport, count: finalCount, success: false, error: msg)
         }
     }
 

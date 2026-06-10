@@ -101,28 +101,10 @@ final class HealthKitService {
         }
     }
 
-    /// Verifica el estado de autorización actual
-    @MainActor
-    private func checkAuthorizationStatus() async {
-        guard let healthStore else { return }
-
-        // HealthKit no tiene una API directa para verificar si un tipo específico está autorizado.
-        // Intentamos ejecutar una query simple como prueba.
-        let runningType = HKObjectType.workoutType()
-
-        let status = healthStore.authorizationStatus(for: runningType)
-
-        switch status {
-        case .sharingAuthorized:
-            authorizationState = .authorized
-        case .sharingDenied:
-            authorizationState = .denied
-        case .notDetermined:
-            authorizationState = .notRequested
-        @unknown default:
-            authorizationState = .notRequested
-        }
-    }
+    // NOTA: authorizationStatus(for:) comprueba permisos de ESCRITURA, no de lectura.
+    // Esta app solo solicita lectura (toShare: []), por lo que siempre devolvería .sharingDenied.
+    // No hay API pública en HealthKit para verificar permisos de lectura — se detecta
+    // intentando un fetch real y observando si devuelve resultados.
 
     // MARK: - Lectura de Workouts
 
@@ -130,12 +112,12 @@ final class HealthKitService {
     /// - Returns: Workouts de HealthKit, vacío si hay error o sin permisos
     func fetchWorkouts(from startDate: Date? = nil, to endDate: Date = Date()) async -> [HKWorkout] {
         guard isAvailable, isAuthorized, let healthStore else {
-            lastError = "HealthKit no disponible o no autorizado"
+            await MainActor.run { lastError = "HealthKit no disponible o no autorizado" }
             return []
         }
 
-        isLoading = true
-        defer { isLoading = false }
+        await MainActor.run { isLoading = true }
+        defer { Task { @MainActor in isLoading = false } }
 
         let predicate: NSPredicate
         if let start = startDate {

@@ -18,21 +18,25 @@ struct SynctrackersApp: App {
     #endif
 
     init() {
-        do {
-            let schema = Schema([
-                WorkoutRecord.self,
-                WorkoutMetric.self,
-                SyncLog.self
-            ])
+        let schema = Schema([
+            WorkoutRecord.self,
+            WorkoutMetric.self,
+            SyncLog.self
+        ])
 
-            // CloudKit: sync automático entre iPhone y Mac via iCloud
-            let configuration = ModelConfiguration(
-                cloudKitDatabase: .private("iCloud.com.saraiba.synctrackers")
-            )
+        let cloudConfig = ModelConfiguration(
+            cloudKitDatabase: .private("iCloud.com.saraiba.synctrackers")
+        )
 
-            container = try ModelContainer(for: schema, configurations: configuration)
-        } catch {
-            fatalError("No se pudo inicializar ModelContainer: \(error)")
+        if let cloudContainer = try? ModelContainer(for: schema, configurations: cloudConfig) {
+            container = cloudContainer
+        } else {
+            // Fallback: local sin CloudKit (iCloud no disponible o entitlement mismatch)
+            let localConfig = ModelConfiguration(isStoredInMemoryOnly: false)
+            guard let localContainer = try? ModelContainer(for: schema, configurations: localConfig) else {
+                fatalError("SwiftData no puede inicializarse ni localmente")
+            }
+            container = localContainer
         }
     }
 

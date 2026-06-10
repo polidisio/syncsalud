@@ -16,9 +16,6 @@ struct DashboardView: View {
             scrollContent
                 .navigationTitle("Dashboard")
                 .navigationBarTitleDisplayMode(.large)
-                .refreshable {
-                    await syncManager.syncFromHealthKit()
-                }
         }
         #else
         scrollContent
@@ -86,6 +83,17 @@ struct DashboardView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
+            }
+
+            if let error = VaultManager.shared.lastICloudError {
+                Label(error, systemImage: "icloud.slash")
+                    .font(.caption2)
+                    .foregroundStyle(.red)
+                    .lineLimit(2)
+            } else if let syncDate = VaultManager.shared.lastICloudSyncDate {
+                Label("Vault: \(syncDate.formatted(date: .omitted, time: .shortened))", systemImage: "icloud.and.arrow.up")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
             }
         }
         .padding()

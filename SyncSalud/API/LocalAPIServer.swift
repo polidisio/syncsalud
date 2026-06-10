@@ -33,7 +33,11 @@ final class LocalAPIServer {
             let params = NWParameters.tcp
             params.allowLocalEndpointReuse = true
 
-            listener = try NWListener(using: params, on: NWEndpoint.Port(rawValue: port)!)
+            guard let nwPort = NWEndpoint.Port(rawValue: port) else {
+                lastError = "Puerto inválido: \(port)"
+                return
+            }
+            listener = try NWListener(using: params, on: nwPort)
             listener?.stateUpdateHandler = { [weak self] state in
                 switch state {
                 case .ready:
@@ -161,31 +165,32 @@ final class LocalAPIServer {
             return httpResponse(status: 503, body: #"{"error":"Database not ready"}"#)
         }
 
-        var predicate: Predicate<WorkoutRecord>?
+        let filterType = query["type"]
+        let filterFrom = query["from"].flatMap { ISO8601DateFormatter().date(from: $0) }
+        let filterTo = query["to"].flatMap { ISO8601DateFormatter().date(from: $0) }
 
-        // Filtro por tipo
-        if let type = query["type"] {
+        // Construir predicado combinado con && para evitar sobreescritura silenciosa
+        let predicate: Predicate<WorkoutRecord>?
+        switch (filterType, filterFrom, filterTo) {
+        case let (type?, from?, to?):
+            predicate = #Predicate { $0.workoutType == type && $0.startDate >= from && $0.startDate <= to }
+        case let (type?, from?, nil):
+            predicate = #Predicate { $0.workoutType == type && $0.startDate >= from }
+        case let (type?, nil, to?):
+            predicate = #Predicate { $0.workoutType == type && $0.startDate <= to }
+        case let (type?, nil, nil):
             predicate = #Predicate { $0.workoutType == type }
+        case let (nil, from?, to?):
+            predicate = #Predicate { $0.startDate >= from && $0.startDate <= to }
+        case let (nil, from?, nil):
+            predicate = #Predicate { $0.startDate >= from }
+        case let (nil, nil, to?):
+            predicate = #Predicate { $0.startDate <= to }
+        default:
+            predicate = nil
         }
 
-        // Filtro por rango de fechas
-        if let fromStr = query["from"], let from = ISO8601DateFormatter().date(from: fromStr) {
-            let datePredicate = #Predicate<WorkoutRecord> { $0.startDate >= from }
-            predicate = predicate.map { pred in
-                // Combinar predicados no es trivial en SwiftData, tomaríamos el más restrictivo
-                // Por simplicidad, aplicamos solo el de fecha si hay conflicto
-                return datePredicate
-            } ?? datePredicate
-        }
-
-        if let toStr = query["to"], let to = ISO8601DateFormatter().date(from: toStr) {
-            let datePredicate = #Predicate<WorkoutRecord> { $0.startDate <= to }
-            predicate = predicate.map { _ in datePredicate } ?? datePredicate
-        }
-
-        // Paginación
         let limit = Int(query["limit"] ?? "50") ?? 50
-        // Clamp limit
         let safeLimit = min(max(limit, 1), 1000)
 
         var descriptor = FetchDescriptor<WorkoutRecord>(

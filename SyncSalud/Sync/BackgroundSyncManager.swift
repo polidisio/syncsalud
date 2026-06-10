@@ -23,9 +23,8 @@ final class BackgroundSyncManager {
         }
         set {
             UserDefaults.standard.set(newValue, forKey: "backgroundSyncInterval")
-            #if os(iOS)
-            registerBackgroundTask()
-            #endif
+            // No re-registrar aquí: BGTaskScheduler.register debe llamarse solo en el
+            // primer runloop tras launch. El nuevo interval se aplica en scheduleBackgroundSync().
         }
     }
 
@@ -160,6 +159,13 @@ class SyncAppDelegate: NSObject, UIApplicationDelegate {
 
     func applicationDidEnterBackground(_ application: UIApplication) {
         BackgroundSyncManager.shared.scheduleBackgroundSync()
+    }
+
+    func application(_ application: UIApplication,
+                     didReceiveRemoteNotification userInfo: [AnyHashable: Any],
+                     fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void) {
+        // CloudKit usa silent pushes para notificar cambios de sync entre dispositivos
+        completionHandler(.newData)
     }
 
     private func registerExportHandler() {
