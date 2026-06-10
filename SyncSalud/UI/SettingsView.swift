@@ -192,6 +192,28 @@ struct SettingsView: View {
                         }
                     }
                     #endif
+                    if syncManager.isBackfilling {
+                        HStack {
+                            ProgressView().scaleEffect(0.8)
+                            Text(String(format: "settings.backfill.progress".localized(), syncManager.backfillProgress))
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            Spacer()
+                            Button("settings.backfill.cancel".localized()) {
+                                syncManager.cancelHeartRateBackfill()
+                            }
+                            .font(.caption)
+                            .buttonStyle(.bordered)
+                            .controlSize(.small)
+                        }
+                    } else {
+                        Button {
+                            syncManager.startHeartRateBackfill()
+                        } label: {
+                            Label("settings.backfill.start".localized(), systemImage: "heart.fill")
+                        }
+                        .disabled(syncManager.isSyncing)
+                    }
                 } header: {
                     Text("settings.sync.title".localized())
                 }

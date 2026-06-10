@@ -60,6 +60,15 @@ struct VaultSectionView: View {
                     .font(.caption)
                     .foregroundStyle(.red)
             }
+
+            if let err = VaultManager.shared.lastICloudError {
+                HStack(spacing: 4) {
+                    Image(systemName: "exclamationmark.icloud")
+                    Text(err)
+                }
+                .font(.caption)
+                .foregroundStyle(.orange)
+            }
         } header: {
             Text("vault.title".localized())
         } footer: {
@@ -256,7 +265,7 @@ struct VaultSectionView: View {
         let interval = saved > 0 ? saved : 6 * 3600
         let request = BGProcessingTaskRequest(identifier: "com.synctrackers.export")
         request.earliestBeginDate = Date(timeIntervalSinceNow: interval)
-        request.requiresNetworkConnectivity = true
+        request.requiresNetworkConnectivity = false  // BUG-010: bird sube async; write es local
         request.requiresExternalPower = false
         do {
             try BGTaskScheduler.shared.submit(request)

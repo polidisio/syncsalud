@@ -16,6 +16,10 @@ final class HealthSyncManager {
     private(set) var lastError: String?
     private(set) var syncProgress: Double = 0
 
+    private(set) var isBackfilling = false
+    private(set) var backfillProgress: Int = 0
+    private var backfillTask: Task<Void, Never>?
+
     /// Fecha del último sync completada (no iniciada)
     private var lastCompletedSync: Date? {
         get { UserDefaults.standard.object(forKey: "lastCompletedSync") as? Date }
@@ -32,6 +36,50 @@ final class HealthSyncManager {
 
     func configure(with context: ModelContext) {
         self.modelContext = context
+    }
+
+    // MARK: - HR Backfill
+
+    /// Rellena avgHeartRate en workouts que no tienen HR, en background.
+    /// Seguro llamar desde main actor — crea Task interno.
+    func startHeartRateBackfill() {
+        guard !isBackfilling, let modelContext else { return }
+        isBackfilling = true
+        backfillProgress = 0
+
+        backfillTask = Task {
+            defer { Task { @MainActor in self.isBackfilling = false } }
+
+            let descriptor = FetchDescriptor<WorkoutRecord>(
+                predicate: #Predicate { $0.avgHeartRate == nil },
+                sortBy: [SortDescriptor(\.startDate, order: .reverse)]
+            )
+            let records = (try? modelContext.fetch(descriptor)) ?? []
+
+            print("📊 HR backfill: \(records.count) workouts sin HR")
+            var updated = 0
+            for record in records {
+                guard !Task.isCancelled else { break }
+                if let hr = await healthService.fetchAverageHeartRate(
+                    from: record.startDate, to: record.endDate
+                ) {
+                    record.avgHeartRate = hr
+                    updated += 1
+                    let count = updated
+                    await MainActor.run { self.backfillProgress = count }
+                }
+                if updated % 10 == 0, updated > 0 {
+                    try? modelContext.save()
+                }
+            }
+            if updated > 0 { try? modelContext.save() }
+            print("📊 HR backfill completado: \(updated)/\(records.count) actualizados")
+        }
+    }
+
+    func cancelHeartRateBackfill() {
+        backfillTask?.cancel()
+        backfillTask = nil
     }
 
     // MARK: - Sincronización
@@ -141,8 +189,9 @@ final class HealthSyncManager {
             // Crear nuevo registro
             let record = WorkoutRecord.fromHKWorkout(hkWorkout)
 
-            // Heart rate solo si no hay muchos workouts (para no demorar)
-            if workouts.count < 500 {
+            // HR solo en syncs incrementales pequeños — syncs iniciales grandes (≥20 workouts)
+            // se saltean para no bloquear UI; los syncs siguientes añaden pocos y sí buscan HR
+            if workouts.count < 20 {
                 if let avgHR = await healthService.fetchAverageHeartRate(for: hkWorkout) {
                     record.avgHeartRate = avgHR
                 }
@@ -184,7 +233,9 @@ final class HealthSyncManager {
             if finalCount > 0 {
                 Task {
                     do {
-                        let vaultResult = try await VaultManager.shared.refreshAll(modelContext: modelContext)
+                        // BUG-003: usar container propio — ModelContext no es Sendable
+                        let ctx = try VaultManager.makeBackgroundContainer().context
+                        let vaultResult = try await VaultManager.shared.refreshAll(modelContext: ctx)
                         print("📦 Vault refreshed: \(vaultResult.monthsWritten.count) months written")
                     } catch {
                         print("⚠️ Vault refresh failed: \(error.localizedDescription)")

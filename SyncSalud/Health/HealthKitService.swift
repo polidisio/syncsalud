@@ -2,6 +2,28 @@ import Foundation
 import HealthKit
 import Observation
 
+/// Garantiza que una CheckedContinuation se resume exactamente una vez,
+/// aunque compitan un timeout y un completion handler de HealthKit.
+private final class OnceResumer<T: Sendable>: @unchecked Sendable {
+    private let lock = NSLock()
+    private var done = false
+    private let continuation: CheckedContinuation<T, Never>
+    private let fallback: T
+
+    init(_ continuation: CheckedContinuation<T, Never>, default fallback: T) {
+        self.continuation = continuation
+        self.fallback = fallback
+    }
+
+    func finish(_ value: T?) {
+        lock.lock()
+        defer { lock.unlock() }
+        guard !done else { return }
+        done = true
+        continuation.resume(returning: value ?? fallback)
+    }
+}
+
 /// States de autorización expuestos a la UI
 enum HealthKitAuthorizationState: Equatable {
     case notRequested
@@ -131,19 +153,17 @@ final class HealthKitService {
 
         return await withCheckedContinuation { continuation in
             let store = healthStore
+            let resumer = OnceResumer(continuation, default: [HKWorkout]())
+            // 30s timeout — fetch de workouts es el más largo
+            Task { try? await Task.sleep(for: .seconds(30)); resumer.finish(nil) }
+
             let query = HKSampleQuery(
                 sampleType: .workoutType(),
                 predicate: predicate,
                 limit: HKObjectQueryNoLimit,
                 sortDescriptors: [sortDescriptor]
             ) { _, samples, error in
-                if error != nil {
-                    continuation.resume(returning: [])
-                    return
-                }
-
-                let workouts = samples as? [HKWorkout] ?? []
-                continuation.resume(returning: workouts)
+                resumer.finish(error != nil ? nil : samples as? [HKWorkout])
             }
 
             store.execute(query)
@@ -155,9 +175,15 @@ final class HealthKitService {
         guard isAvailable, isAuthorized, let healthStore else { return nil }
 
         let heartRateType = HKQuantityType(.heartRate)
-        let predicate = HKQuery.predicateForSamples(withStart: workout.startDate, end: workout.endDate, options: .strictStartDate)
+        let predicate = HKQuery.predicateForSamples(
+            withStart: workout.startDate, end: workout.endDate, options: .strictStartDate
+        )
 
         return await withCheckedContinuation { continuation in
+            let resumer = OnceResumer(continuation, default: nil as Double?)
+            // 5s timeout por query individual
+            Task { try? await Task.sleep(for: .seconds(5)); resumer.finish(nil) }
+
             let query = HKStatisticsQuery(
                 quantityType: heartRateType,
                 quantitySamplePredicate: predicate,
@@ -165,7 +191,33 @@ final class HealthKitService {
             ) { _, statistics, _ in
                 let avg = statistics?.averageQuantity()?
                     .doubleValue(for: HKUnit.count().unitDivided(by: .minute()))
-                continuation.resume(returning: avg)
+                resumer.finish(avg)
+            }
+            healthStore.execute(query)
+        }
+    }
+
+    /// Obtener frecuencia cardíaca promedio para un rango de fechas (backfill, sin HKWorkout en memoria)
+    func fetchAverageHeartRate(from startDate: Date, to endDate: Date) async -> Double? {
+        guard isAvailable, isAuthorized, let healthStore else { return nil }
+
+        let heartRateType = HKQuantityType(.heartRate)
+        let predicate = HKQuery.predicateForSamples(
+            withStart: startDate, end: endDate, options: .strictStartDate
+        )
+
+        return await withCheckedContinuation { continuation in
+            let resumer = OnceResumer(continuation, default: nil as Double?)
+            Task { try? await Task.sleep(for: .seconds(5)); resumer.finish(nil) }
+
+            let query = HKStatisticsQuery(
+                quantityType: heartRateType,
+                quantitySamplePredicate: predicate,
+                options: .discreteAverage
+            ) { _, statistics, _ in
+                let avg = statistics?.averageQuantity()?
+                    .doubleValue(for: HKUnit.count().unitDivided(by: .minute()))
+                resumer.finish(avg)
             }
             healthStore.execute(query)
         }

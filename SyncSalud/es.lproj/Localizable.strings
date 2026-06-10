@@ -73,6 +73,9 @@
 "settings.sync.dateFilter.hint" = "Se sincronizarán solo los workouts entre las fechas seleccionadas.";
 "settings.sync.background" = "Sincronización en background";
 "settings.sync.interval" = "Intervalo";
+"settings.backfill.start" = "Obtener frecuencias cardíacas faltantes";
+"settings.backfill.progress" = "Obteniendo frecuencias cardíacas… %d actualizados";
+"settings.backfill.cancel" = "Cancelar";
 
 "settings.sync.title" = "Sincronización";
 "settings.export.adhoc" = "Exportar y compartir JSON";

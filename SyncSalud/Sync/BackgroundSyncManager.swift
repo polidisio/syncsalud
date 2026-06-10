@@ -214,7 +214,7 @@ enum JSONExporterDirect {
 
         let request = BGProcessingTaskRequest(identifier: "com.synctrackers.export")
         request.earliestBeginDate = Date(timeIntervalSinceNow: interval)
-        request.requiresNetworkConnectivity = true
+        request.requiresNetworkConnectivity = false  // BUG-010: bird sube async; write es local
         request.requiresExternalPower = false
 
         try? BGTaskScheduler.shared.submit(request)

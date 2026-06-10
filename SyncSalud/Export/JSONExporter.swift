@@ -202,7 +202,7 @@ final class JSONExporter {
 
         let request = BGProcessingTaskRequest(identifier: "com.synctrackers.export")
         request.earliestBeginDate = Date(timeIntervalSinceNow: scheduledExportInterval)
-        request.requiresNetworkConnectivity = true
+        request.requiresNetworkConnectivity = false  // BUG-010: bird sube async; write es local
         request.requiresExternalPower = false
 
         do {
@@ -245,9 +245,17 @@ final class JSONExporter {
                 "source": record.source
             ]
             if let cal = record.calories { dict["calories"] = cal }
-            if let dist = record.distance { dict["distance"] = dist }
+            if let dist = record.distance {
+                dict["distance"] = dist
+                dict["distanceUnit"] = record.distanceUnit ?? "m"
+            }
             if let avg = record.avgHeartRate { dict["avgHeartRate"] = avg }
             if let max = record.maxHeartRate { dict["maxHeartRate"] = max }
+            if let min = record.minHeartRate { dict["minHeartRate"] = min }
+            if let meta = record.metadataData,
+               let obj = try? JSONSerialization.jsonObject(with: meta) {
+                dict["metadata"] = obj
+            }
             return dict
         }
 

@@ -29,6 +29,8 @@ struct VaultMonth: Codable {
     var byteSize: Int
     var lastUpdatedAt: Date
     var recordRange: VaultRecordRange
+    /// nil = iCloud mirror nunca se completó para esta versión del mes.
+    var iCloudSyncedAt: Date?
 }
 
 /// Rango de fechas cubierto por un snapshot mensual.

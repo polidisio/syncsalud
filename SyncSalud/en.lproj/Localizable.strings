@@ -73,6 +73,9 @@
 "settings.sync.dateFilter.hint" = "Only workouts between selected dates will be synced.";
 "settings.sync.background" = "Background sync";
 "settings.sync.interval" = "Interval";
+"settings.backfill.start" = "Fetch missing heart rates";
+"settings.backfill.progress" = "Fetching heart rates… %d updated";
+"settings.backfill.cancel" = "Cancel";
 
 "settings.sync.title" = "Sync";
 "settings.export.title" = "Export";

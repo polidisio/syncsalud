@@ -56,10 +56,10 @@ final class VaultManager {
         localVaultURL?.appendingPathComponent(snapshotsSubpath, isDirectory: true)
     }
 
-    /// Root del mirror iCloud (nil si el usuario no está logueado o macOS sin entitlement de Documents).
+    /// Root del mirror iCloud (nil hasta que `resolveICloudContainerIfNeeded()` corra en background).
     var iCloudVaultURL: URL? {
         guard fm.ubiquityIdentityToken != nil else { return nil }
-        guard let container = fm.url(forUbiquityContainerIdentifier: nil) else { return nil }
+        guard let container = _cachedICloudContainerURL else { return nil }
         return container
             .appendingPathComponent("Documents", isDirectory: true)
             .appendingPathComponent(folderName, isDirectory: true)
@@ -72,8 +72,17 @@ final class VaultManager {
 
     var isICloudMirroring: Bool { iCloudSnapshotsURL != nil }
 
+    /// Resuelve el container iCloud una sola vez. Llamar SOLO desde contexto async/background.
+    private func resolveICloudContainerIfNeeded() {
+        guard _cachedICloudContainerURL == nil,
+              fm.ubiquityIdentityToken != nil else { return }
+        _cachedICloudContainerURL = fm.url(forUbiquityContainerIdentifier: nil)
+    }
+
     private(set) var lastICloudError: String?
     private(set) var lastICloudSyncDate: Date?
+    // BUG-004: cache resuelto en background; url(forUbiquityContainerIdentifier:) es lento
+    private var _cachedICloudContainerURL: URL?
 
     // MARK: - Index
 
@@ -160,6 +169,7 @@ final class VaultManager {
     /// Llamar desde foreground o desde la BG task.
     @discardableResult
     func refreshAll(modelContext: ModelContext) async throws -> VaultRefreshResult {
+        resolveICloudContainerIfNeeded()
         _ = ensureDirectories()
 
         // 1. Bounds: mes más antiguo con datos → mes actual.
@@ -191,10 +201,14 @@ final class VaultManager {
 
             // ¿Necesita reescribirse?
             let prevEntry = index.months[ym]
+            // BUG-006: tolerancia 1s — ISO8601 trunca fracciones de segundo
+            // BUG-002: no saltar si iCloud está activo y este mes aún no se espejó
+            let iCloudPending = isICloudMirroring && prevEntry?.iCloudSyncedAt == nil
             if let prev = prevEntry,
-               prev.lastUpdatedAt == latest,
+               abs(prev.lastUpdatedAt.timeIntervalSince(latest)) < 1,
                count == prev.workoutCount,
-               fm.fileExists(atPath: (readMonth(ym)?.path) ?? "") {
+               fm.fileExists(atPath: (readMonth(ym)?.path) ?? ""),
+               !iCloudPending {
                 skipped.append(ym)
                 continue
             }
@@ -206,7 +220,7 @@ final class VaultManager {
             }
 
             do {
-                try await writeSnapshot(yearMonth: ym, data: jsonData)
+                let iCloudSynced = try await writeSnapshot(yearMonth: ym, data: jsonData)
                 let size = jsonData.count
                 let range: VaultRecordRange
                 if let first = records.map(\.startDate).min(), let last = records.map(\.startDate).max() {
@@ -214,7 +228,8 @@ final class VaultManager {
                 } else {
                     range = VaultRecordRange(from: start, to: end)
                 }
-                index.months[ym] = VaultMonth(workoutCount: count, byteSize: size, lastUpdatedAt: latest, recordRange: range)
+                let syncedAt = iCloudSynced ? Date() : prevEntry?.iCloudSyncedAt
+                index.months[ym] = VaultMonth(workoutCount: count, byteSize: size, lastUpdatedAt: latest, recordRange: range, iCloudSyncedAt: syncedAt)
                 written.append(ym)
                 if let url = readMonth(ym) { writtenURLs.append(url) }
             } catch {
@@ -232,6 +247,7 @@ final class VaultManager {
     /// Fuerza la reescritura de un mes puntual. Devuelve la URL local del snapshot resultante.
     @discardableResult
     func refreshMonth(_ yearMonth: String, modelContext: ModelContext) async throws -> URL? {
+        resolveICloudContainerIfNeeded()
         _ = ensureDirectories()
         let (start, end) = try monthInterval(yearMonth: yearMonth)
         let descriptor = FetchDescriptor<WorkoutRecord>(
@@ -240,7 +256,7 @@ final class VaultManager {
         )
         let records = (try? modelContext.fetch(descriptor)) ?? []
         guard let jsonData = buildMonthJSON(month: yearMonth, records: records) else { return nil }
-        try await writeSnapshot(yearMonth: yearMonth, data: jsonData)
+        let iCloudSynced = try await writeSnapshot(yearMonth: yearMonth, data: jsonData)
 
         var index = loadIndex() ?? .empty()
         let latest = records.map(\.updatedAt).max() ?? .distantPast
@@ -250,7 +266,8 @@ final class VaultManager {
         } else {
             range = VaultRecordRange(from: start, to: end)
         }
-        index.months[yearMonth] = VaultMonth(workoutCount: records.count, byteSize: jsonData.count, lastUpdatedAt: latest, recordRange: range)
+        let prevSyncedAt = index.months[yearMonth]?.iCloudSyncedAt
+        index.months[yearMonth] = VaultMonth(workoutCount: records.count, byteSize: jsonData.count, lastUpdatedAt: latest, recordRange: range, iCloudSyncedAt: iCloudSynced ? Date() : prevSyncedAt)
         index.lastRefresh = Date()
         try? saveIndex(index)
 
@@ -276,40 +293,26 @@ final class VaultManager {
         return JSONExporter.buildJSONData(records: records, summaryOnly: false, month: month)
     }
 
-    private func writeSnapshot(yearMonth: String, data: Data) async throws {
+    // BUG-001/007: usa writeWithCoordinator para coordinar con bird; retorna éxito iCloud (BUG-002)
+    private func writeSnapshot(yearMonth: String, data: Data) async throws -> Bool {
         guard let localSnapshots = localSnapshotsURL else { throw VaultError.noLocalRoot }
         let finalURL = localSnapshots.appendingPathComponent("vault-\(yearMonth).json")
-        let tmpURL = localSnapshots.appendingPathComponent("vault-\(yearMonth).json.tmp")
+        try writeWithCoordinator(data: data, to: finalURL)
 
-        // Local (atómico): .tmp + rename
-        try data.write(to: tmpURL, options: .atomic)
-        if fm.fileExists(atPath: finalURL.path) {
-            _ = try fm.replaceItemAt(finalURL, withItemAt: tmpURL)
-        } else {
-            try fm.moveItem(at: tmpURL, to: finalURL)
-        }
-
-        // iCloud mirror con reintentos (backoff 1s / 2s / 4s)
-        if let iCloudSnapshots = iCloudSnapshotsURL {
-            await writeICloudWithRetry(data: data, yearMonth: yearMonth, to: iCloudSnapshots)
-        }
+        guard let iCloudSnapshots = iCloudSnapshotsURL else { return false }
+        return await writeICloudWithRetry(data: data, yearMonth: yearMonth, to: iCloudSnapshots)
     }
 
-    private func writeICloudWithRetry(data: Data, yearMonth: String, to iCloudSnapshots: URL) async {
+    private func writeICloudWithRetry(data: Data, yearMonth: String, to iCloudSnapshots: URL) async -> Bool {
         let finalURL = iCloudSnapshots.appendingPathComponent("vault-\(yearMonth).json")
-        let tmpURL = iCloudSnapshots.appendingPathComponent("vault-\(yearMonth).json.tmp")
 
         for attempt in 0..<3 {
             do {
-                try data.write(to: tmpURL, options: .atomic)
-                if fm.fileExists(atPath: finalURL.path) {
-                    _ = try fm.replaceItemAt(finalURL, withItemAt: tmpURL)
-                } else {
-                    try fm.moveItem(at: tmpURL, to: finalURL)
-                }
+                // BUG-001: NSFileCoordinator coordina con bird; BUG-007: tmp fuera del container
+                try writeWithCoordinator(data: data, to: finalURL)
                 lastICloudError = nil
                 lastICloudSyncDate = Date()
-                return
+                return true
             } catch {
                 if attempt < 2 {
                     let delay = UInt64(pow(2.0, Double(attempt))) * 1_000_000_000
@@ -320,6 +323,34 @@ final class VaultManager {
                 }
             }
         }
+        return false
+    }
+
+    /// Escribe `data` a `finalURL` usando NSFileCoordinator para coordinar con iCloud (bird).
+    /// El archivo temporal se crea en `temporaryDirectory`, fuera del ubiquity container (BUG-007).
+    private func writeWithCoordinator(data: Data, to finalURL: URL) throws {
+        let tmpURL = fm.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".json.tmp")
+        var coordinatorError: NSError?
+        var accessorError: Error?
+
+        let coordinator = NSFileCoordinator(filePresenter: nil)
+        coordinator.coordinate(writingItemAt: finalURL, options: .forReplacing, error: &coordinatorError) { coordURL in
+            do {
+                try data.write(to: tmpURL, options: .atomic)
+                if fm.fileExists(atPath: coordURL.path) {
+                    _ = try fm.replaceItemAt(coordURL, withItemAt: tmpURL)
+                } else {
+                    try fm.createDirectory(at: coordURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+                    try fm.moveItem(at: tmpURL, to: coordURL)
+                }
+            } catch {
+                accessorError = error
+            }
+            try? fm.removeItem(at: tmpURL)
+        }
+
+        if let err = coordinatorError { throw err }
+        if let err = accessorError { throw err }
     }
 
     private func ensureDirectories() -> Bool {
