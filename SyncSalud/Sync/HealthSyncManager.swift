@@ -40,21 +40,22 @@ final class HealthSyncManager {
 
     // MARK: - HR Backfill
 
-    /// Rellena avgHeartRate en workouts que no tienen HR, en background.
-    /// Seguro llamar desde main actor — crea Task interno.
-    func startHeartRateBackfill() {
-        guard !isBackfilling, let modelContext else { return }
+    /// Rellena avgHeartRate en workouts sin HR, en background (máx 200 por ronda).
+    /// Requiere modelContext explícito desde la vista — evita guardia silenciosa si configure() no se llamó.
+    func startHeartRateBackfill(context: ModelContext) {
+        guard !isBackfilling else { return }
         isBackfilling = true
         backfillProgress = 0
 
         backfillTask = Task {
             defer { Task { @MainActor in self.isBackfilling = false } }
 
-            let descriptor = FetchDescriptor<WorkoutRecord>(
+            var descriptor = FetchDescriptor<WorkoutRecord>(
                 predicate: #Predicate { $0.avgHeartRate == nil },
                 sortBy: [SortDescriptor(\.startDate, order: .reverse)]
             )
-            let records = (try? modelContext.fetch(descriptor)) ?? []
+            descriptor.fetchLimit = 200
+            let records = (try? context.fetch(descriptor)) ?? []
 
             print("📊 HR backfill: \(records.count) workouts sin HR")
             var updated = 0
@@ -69,10 +70,10 @@ final class HealthSyncManager {
                     await MainActor.run { self.backfillProgress = count }
                 }
                 if updated % 10 == 0, updated > 0 {
-                    try? modelContext.save()
+                    try? context.save()
                 }
             }
-            if updated > 0 { try? modelContext.save() }
+            if updated > 0 { try? context.save() }
             print("📊 HR backfill completado: \(updated)/\(records.count) actualizados")
         }
     }

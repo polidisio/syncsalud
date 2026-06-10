@@ -68,7 +68,6 @@ struct SynctrackersApp: App {
 
             if healthService.isAuthorized {
                 await syncManager.syncFromHealthKit()
-                syncManager.startHeartRateBackfill()
             }
 
             #if os(macOS)

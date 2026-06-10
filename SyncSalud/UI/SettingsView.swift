@@ -208,7 +208,7 @@ struct SettingsView: View {
                         }
                     } else {
                         Button {
-                            syncManager.startHeartRateBackfill()
+                            syncManager.startHeartRateBackfill(context: modelContext)
                         } label: {
                             Label("settings.backfill.start".localized(), systemImage: "heart.fill")
                         }
