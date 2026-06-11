@@ -102,23 +102,21 @@ struct OnboardingView: View {
                     withAnimation { currentPage = 2 }
                 }
             } label: {
-                Text("onboarding.health.grant".localized())
-                    .font(.headline)
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.blue)
-                    .foregroundStyle(.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                HStack(spacing: 8) {
+                    if healthService.isLoading {
+                        ProgressView().tint(.white)
+                    }
+                    Text("onboarding.health.grant".localized())
+                }
+                .font(.headline)
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(Color.blue)
+                .foregroundStyle(.white)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
             }
+            .disabled(healthService.isLoading)
             .padding(.horizontal, 32)
-
-            Button {
-                withAnimation { currentPage = 2 }
-            } label: {
-                Text("onboarding.health.skip".localized())
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
             .padding(.bottom, 48)
         }
     }

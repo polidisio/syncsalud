@@ -72,11 +72,14 @@ final class VaultManager {
 
     var isICloudMirroring: Bool { iCloudSnapshotsURL != nil }
 
-    /// Resuelve el container iCloud una sola vez. Llamar SOLO desde contexto async/background.
+    /// Resuelve el container iCloud una sola vez en background (url(forUbiquityContainerIdentifier:) bloquea).
     private func resolveICloudContainerIfNeeded() {
         guard _cachedICloudContainerURL == nil,
               fm.ubiquityIdentityToken != nil else { return }
-        _cachedICloudContainerURL = fm.url(forUbiquityContainerIdentifier: nil)
+        Task.detached(priority: .background) {
+            let url = FileManager.default.url(forUbiquityContainerIdentifier: nil)
+            await MainActor.run { [weak self] in self?._cachedICloudContainerURL = url }
+        }
     }
 
     private(set) var lastICloudError: String?
@@ -276,15 +279,11 @@ final class VaultManager {
 
     // MARK: - Background container helper
 
-    /// Crea un ModelContainer independiente — útil para BG tasks que no pueden usar el del app foreground.
+    /// Devuelve un ModelContext nuevo sobre el container compartido único.
+    /// NO crea un segundo NSPersistentCloudKitContainer (eso causaría crash sobre el mismo store).
     static func makeBackgroundContainer() throws -> (container: ModelContainer, context: ModelContext) {
-        let schema = Schema([WorkoutRecord.self, WorkoutMetric.self, SyncLog.self])
-        let config = ModelConfiguration(
-            cloudKitDatabase: .private("iCloud.com.saraiba.synctrackers")
-        )
-        let container = try ModelContainer(for: schema, configurations: config)
-        let context = ModelContext(container)
-        return (container, context)
+        let container = AppModelContainer.shared
+        return (container, ModelContext(container))
     }
 
     // MARK: - Private

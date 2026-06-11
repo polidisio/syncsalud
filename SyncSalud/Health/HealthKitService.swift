@@ -52,17 +52,12 @@ final class HealthKitService {
         .soccer, .basketball, .other
     ]
 
-    /// Los tipos de cantidad que Synctrackers puede leer
+    /// Los tipos de cantidad que Synctrackers consulta de verdad.
+    /// Solo heartRate: calorías/distancia salen del objeto HKWorkout directo.
+    /// Menos tipos = permission sheet más rápido.
     private var quantityTypesToRead: Set<HKQuantityType> {
         [
-            HKQuantityType(.heartRate),
-            HKQuantityType(.activeEnergyBurned),
-            HKQuantityType(.distanceWalkingRunning),
-            HKQuantityType(.distanceCycling),
-            HKQuantityType(.runningSpeed),
-            HKQuantityType(.runningPower),
-            HKQuantityType(.cyclingPower),
-            HKQuantityType(.vo2Max)
+            HKQuantityType(.heartRate)
         ]
     }
 
@@ -84,6 +79,10 @@ final class HealthKitService {
     /// Solicita autorización a HealthKit
     @MainActor
     func requestAuthorization() async {
+        guard !isLoading else { return }  // evita peticiones concurrentes por taps múltiples
+        isLoading = true
+        defer { isLoading = false }
+
         print("🏥 Solicitando autorización HealthKit...")
         print("   - isAvailable: \(isAvailable)")
         print("   - healthStore: \(healthStore != nil)")
@@ -105,10 +104,12 @@ final class HealthKitService {
         readTypes.formUnion(quantityTypesToRead)
 
         do {
+            let t0 = Date()
             try await healthStore.requestAuthorization(
                 toShare: [],  // Solo lectura, no escribimos datos
                 read: readTypes
             )
+            print("⏱️ requestAuthorization tardó \(String(format: "%.2f", Date().timeIntervalSince(t0)))s")
 
             // HealthKit NO informa si la autorización fue otorgada o denegada
             // (es privado por diseño). Asumimos que si no hubo error, está disponible.
@@ -221,22 +222,5 @@ final class HealthKitService {
             }
             healthStore.execute(query)
         }
-    }
-
-    // MARK: - Observación en vivo
-
-    /// Configura un observer para detectar nuevos workouts en HealthKit
-    /// Llama al closure cuando detecta cambios
-    func startObserver(forUpdate handler: @escaping () -> Void) {
-        guard isAvailable, isAuthorized, let healthStore else { return }
-
-        let query = HKObserverQuery(sampleType: .workoutType(), predicate: nil) { _, completionHandler, error in
-            if error == nil {
-                handler()
-            }
-            completionHandler()
-        }
-
-        healthStore.execute(query)
     }
 }

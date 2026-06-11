@@ -5,19 +5,11 @@ import SwiftData
 import UIKit
 #endif
 
-@main
-struct SynctrackersApp: App {
-    @State private var healthService = HealthKitService()
-    @State private var syncManager = HealthSyncManager()
-    @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
-
-    let container: ModelContainer
-
-    #if os(iOS)
-    @UIApplicationDelegateAdaptor(SyncAppDelegate.self) var appDelegate
-    #endif
-
-    init() {
+/// Container SwiftData único compartido por la app y las background tasks.
+/// NSPersistentCloudKitContainer debe ser singleton por store — crear un segundo
+/// container sobre el mismo store CloudKit causa crash.
+enum AppModelContainer {
+    static let shared: ModelContainer = {
         let schema = Schema([
             WorkoutRecord.self,
             WorkoutMetric.self,
@@ -29,16 +21,29 @@ struct SynctrackersApp: App {
         )
 
         if let cloudContainer = try? ModelContainer(for: schema, configurations: cloudConfig) {
-            container = cloudContainer
-        } else {
-            // Fallback: local sin CloudKit (iCloud no disponible o entitlement mismatch)
-            let localConfig = ModelConfiguration(isStoredInMemoryOnly: false)
-            guard let localContainer = try? ModelContainer(for: schema, configurations: localConfig) else {
-                fatalError("SwiftData no puede inicializarse ni localmente")
-            }
-            container = localContainer
+            return cloudContainer
         }
-    }
+
+        // Fallback: local sin CloudKit (iCloud no disponible o entitlement mismatch)
+        let localConfig = ModelConfiguration(isStoredInMemoryOnly: false)
+        guard let localContainer = try? ModelContainer(for: schema, configurations: localConfig) else {
+            fatalError("SwiftData no puede inicializarse ni localmente")
+        }
+        return localContainer
+    }()
+}
+
+@main
+struct SynctrackersApp: App {
+    @State private var healthService = HealthKitService()
+    @State private var syncManager = HealthSyncManager()
+    @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
+
+    let container: ModelContainer = AppModelContainer.shared
+
+    #if os(iOS)
+    @UIApplicationDelegateAdaptor(SyncAppDelegate.self) var appDelegate
+    #endif
 
     var body: some Scene {
         WindowGroup {

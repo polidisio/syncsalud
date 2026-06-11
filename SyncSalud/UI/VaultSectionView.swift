@@ -6,6 +6,7 @@ import BackgroundTasks
 
 struct VaultSectionView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(HealthSyncManager.self) private var syncManager
     @State private var index: VaultIndex?
     @State private var isRefreshing: Bool = false
     @State private var refreshError: String?
@@ -81,6 +82,12 @@ struct VaultSectionView: View {
             ShareSheet(items: shareItems)
         }
         #endif
+        .onChange(of: syncManager.needsVaultRefresh) { _, needed in
+            if needed {
+                syncManager.clearVaultRefreshFlag()
+                Task { await refresh() }
+            }
+        }
     }
 
     // MARK: - Subviews
@@ -220,7 +227,12 @@ struct VaultSectionView: View {
         refreshError = nil
         defer { isRefreshing = false }
         do {
-            _ = try await VaultManager.shared.refreshAll(modelContext: modelContext)
+            // Context dedicado del container compartido, fuera del main thread.
+            // No usar el modelContext de la UI (MainActor-bound, no thread-safe).
+            _ = try await Task.detached(priority: .utility) {
+                let ctx = ModelContext(AppModelContainer.shared)
+                return try await VaultManager.shared.refreshAll(modelContext: ctx)
+            }.value
             index = VaultManager.shared.loadIndex()
             iCloudMirroring = VaultManager.shared.isICloudMirroring
         } catch {

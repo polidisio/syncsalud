@@ -15,6 +15,7 @@ final class HealthSyncManager {
     private(set) var lastSyncCount = 0
     private(set) var lastError: String?
     private(set) var syncProgress: Double = 0
+    private(set) var needsVaultRefresh = false
 
     private(set) var isBackfilling = false
     private(set) var backfillProgress: Int = 0
@@ -38,17 +39,24 @@ final class HealthSyncManager {
         self.modelContext = context
     }
 
+    func clearVaultRefreshFlag() {
+        needsVaultRefresh = false
+    }
+
     // MARK: - HR Backfill
 
     /// Rellena avgHeartRate en workouts sin HR, en background (máx 200 por ronda).
-    /// Requiere modelContext explícito desde la vista — evita guardia silenciosa si configure() no se llamó.
-    func startHeartRateBackfill(context: ModelContext) {
+    /// Usa un context propio del container compartido (no el de UI).
+    func startHeartRateBackfill() {
         guard !isBackfilling else { return }
         isBackfilling = true
         backfillProgress = 0
 
         backfillTask = Task {
             defer { Task { @MainActor in self.isBackfilling = false } }
+
+            // Context dedicado del container compartido (no el de UI, esto corre en background).
+            let context = ModelContext(AppModelContainer.shared)
 
             var descriptor = FetchDescriptor<WorkoutRecord>(
                 predicate: #Predicate { $0.avgHeartRate == nil },
@@ -96,10 +104,9 @@ final class HealthSyncManager {
             return
         }
 
-        guard let modelContext else {
-            await MainActor.run { lastError = "ModelContext no configurado" }
-            return
-        }
+        // Context dedicado del container compartido. NO usar el modelContext de la UI
+        // (MainActor-bound, no thread-safe): esta función corre fuera del main thread.
+        let modelContext = ModelContext(AppModelContainer.shared)
 
         if !force, let lastSync = lastCompletedSync, Date().timeIntervalSince(lastSync) < 300 {
             print("⏸️ Sync reciente (\(Int(Date().timeIntervalSince(lastSync)))s), saltando")
@@ -232,16 +239,7 @@ final class HealthSyncManager {
             logSync(type: SyncLog.SyncType.healthKitImport, count: finalCount, success: true)
             print("✅ Sync completado: \(finalCount) nuevos, \(skipCount) ya existían")
             if finalCount > 0 {
-                Task {
-                    do {
-                        // BUG-003: usar container propio — ModelContext no es Sendable
-                        let ctx = try VaultManager.makeBackgroundContainer().context
-                        let vaultResult = try await VaultManager.shared.refreshAll(modelContext: ctx)
-                        print("📦 Vault refreshed: \(vaultResult.monthsWritten.count) months written")
-                    } catch {
-                        print("⚠️ Vault refresh failed: \(error.localizedDescription)")
-                    }
-                }
+                await MainActor.run { needsVaultRefresh = true }
             }
         } catch {
             let msg = "Error al guardar: \(error.localizedDescription)"

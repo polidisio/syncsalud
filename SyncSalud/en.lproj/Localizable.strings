@@ -6,8 +6,7 @@
 "onboarding.health.title" = "Apple Health Access";
 "onboarding.health.description" = "Synctrackers needs to read your workouts\nto sync them and create backups.";
 "onboarding.health.reassurance" = "Read-only. We never modify your data.";
-"onboarding.health.grant" = "Grant Permission";
-"onboarding.health.skip" = "Skip";
+"onboarding.health.grant" = "Continue";
 
 "onboarding.icloud.title" = "iCloud Sync";
 "onboarding.icloud.description" = "Your workouts are saved in iCloud\nand sync across your devices.";
@@ -73,7 +72,7 @@
 "settings.sync.dateFilter.hint" = "Only workouts between selected dates will be synced.";
 "settings.sync.background" = "Background sync";
 "settings.sync.interval" = "Interval";
-"settings.backfill.start" = "Fetch heart rate for past workouts";
+"settings.backfill.start" = "Download past workouts";
 "settings.backfill.progress" = "Fetching HR… %d workouts updated";
 "settings.backfill.cancel" = "Cancel";
 
