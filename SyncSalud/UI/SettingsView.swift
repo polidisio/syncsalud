@@ -4,6 +4,7 @@ import SwiftData
 struct SettingsView: View {
     @Environment(HealthKitService.self) private var healthService
     @Environment(HealthSyncManager.self) private var syncManager
+    @Environment(CloudSyncStatusMonitor.self) private var cloudSyncStatus
     @Environment(\.modelContext) private var modelContext
 
     @State private var backgroundSyncEnabled: Bool = BackgroundSyncManager.shared.isBackgroundSyncEnabled
@@ -35,6 +36,40 @@ struct SettingsView: View {
     }
 
     private let workoutTypes = ["running", "cycling", "walking", "swimming", "hiking", "yoga", "other"]
+
+    @ViewBuilder
+    private var cloudSyncStatusView: some View {
+        HStack {
+            Image(systemName: cloudSyncStatus.lastError != nil ? "exclamationmark.icloud.fill" : "icloud.fill")
+                .foregroundStyle(cloudSyncStatus.lastError != nil ? .orange : .blue)
+            if cloudSyncStatus.isSyncing {
+                Text("settings.sync.icloud.syncing".localized())
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } else if let error = cloudSyncStatus.lastError {
+                VStack(alignment: .leading) {
+                    Text("settings.sync.icloud.error".localized())
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                    Text(error)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+            } else if let last = cloudSyncStatus.lastSuccessfulSync {
+                Text("settings.sync.icloud.synced".localized())
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Text(last, style: .relative)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } else {
+                Text("settings.sync.icloud.pending".localized())
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
 
     @ViewBuilder
     private var healthStatusView: some View {
@@ -147,6 +182,8 @@ struct SettingsView: View {
                                 .foregroundStyle(.secondary)
                         }
                     }
+
+                    cloudSyncStatusView
 
                     Toggle("settings.sync.dateFilter", isOn: $dateFilterEnabled)
 
@@ -448,4 +485,5 @@ struct ShareSheet: UIViewControllerRepresentable {
         .modelContainer(for: [WorkoutRecord.self], inMemory: true)
         .environment(HealthKitService())
         .environment(HealthSyncManager())
+        .environment(CloudSyncStatusMonitor())
 }

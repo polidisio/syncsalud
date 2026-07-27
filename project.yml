@@ -37,6 +37,7 @@ targets:
         PRODUCT_NAME: Synctrackers
         INFOPLIST_FILE: SyncSalud/Info-iOS.plist
         CODE_SIGN_ENTITLEMENTS: SyncSalud/Synctrackers-iOS.entitlements
+        SDKROOT: iphoneos
         TARGETED_DEVICE_FAMILY: "1,2"
         SUPPORTS_MACCATALYST: NO
         GENERATE_INFOPLIST_FILE: NO
@@ -58,6 +59,7 @@ targets:
         PRODUCT_NAME: Synctrackers
         INFOPLIST_FILE: SyncSalud/Info-macOS.plist
         CODE_SIGN_ENTITLEMENTS: SyncSalud/Synctrackers-macOS.entitlements
+        SDKROOT: macosx
         ENABLE_HARDENED_RUNTIME: YES
         COMBINE_HIDPI_IMAGES: YES
         GENERATE_INFOPLIST_FILE: NO

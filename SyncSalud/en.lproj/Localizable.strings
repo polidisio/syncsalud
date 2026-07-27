@@ -71,6 +71,10 @@
 "settings.sync.to" = "To";
 "settings.sync.dateFilter.hint" = "Only workouts between selected dates will be synced.";
 "settings.sync.background" = "Background sync";
+"settings.sync.icloud.synced" = "iCloud: synced";
+"settings.sync.icloud.syncing" = "iCloud: syncing…";
+"settings.sync.icloud.error" = "iCloud: sync error";
+"settings.sync.icloud.pending" = "iCloud: waiting for first sync";
 "settings.sync.interval" = "Interval";
 "settings.backfill.start" = "Download past workouts";
 "settings.backfill.progress" = "Fetching HR… %d workouts updated";
@@ -109,6 +113,11 @@
 "vault.status.icloud" = "Local + iCloud Drive";
 "vault.status.localOnly" = "Local only (no iCloud)";
 "vault.availableMonths" = "Available Months";
+"vault.summary.months" = "%d months saved";
+"vault.summary.workouts" = "%d workouts · %@";
+"vault.summary.latest" = "Latest: %@";
+"vault.showAllMonths" = "Show all months";
+"vault.hideAllMonths" = "Hide months";
 "vault.empty" = "Empty";
 "vault.empty.instruction" = "Sync HealthKit first. Then tap Refresh.";
 "vault.refresh" = "Refresh Now";
