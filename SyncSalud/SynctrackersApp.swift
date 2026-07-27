@@ -37,6 +37,7 @@ enum AppModelContainer {
 struct SynctrackersApp: App {
     @State private var healthService = HealthKitService()
     @State private var syncManager = HealthSyncManager()
+    @State private var cloudSyncStatus = CloudSyncStatusMonitor()
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
 
     let container: ModelContainer = AppModelContainer.shared
@@ -59,6 +60,7 @@ struct SynctrackersApp: App {
                 .modelContainer(container)
                 .environment(healthService)
                 .environment(syncManager)
+                .environment(cloudSyncStatus)
         }
         #if os(macOS)
         .windowStyle(.titleBar)

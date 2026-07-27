@@ -28,14 +28,24 @@ final class BackgroundSyncManager {
         }
     }
 
-    /// Si la sincronización en background está habilitada
+    /// Si la sincronización en background está habilitada.
+    /// Default `true` cuando el usuario nunca tocó el toggle (nueva instalación).
     var isBackgroundSyncEnabled: Bool {
-        get { UserDefaults.standard.bool(forKey: "backgroundSyncEnabled") }
+        get {
+            guard UserDefaults.standard.object(forKey: "backgroundSyncEnabled") != nil else {
+                return true
+            }
+            return UserDefaults.standard.bool(forKey: "backgroundSyncEnabled")
+        }
         set {
             UserDefaults.standard.set(newValue, forKey: "backgroundSyncEnabled")
             #if os(iOS)
+            // No llamar registerBackgroundTask() aquí: BGTaskScheduler.register ya se
+            // hizo una única vez en SyncAppDelegate.didFinishLaunchingWithOptions.
+            // Registrar un identificador ya registrado crashea la app (NSInternalInconsistencyException),
+            // lo que impedía que este toggle persistiera entre sesiones.
             if newValue {
-                registerBackgroundTask()
+                scheduleBackgroundSync()
             } else {
                 cancelBackgroundTask()
             }

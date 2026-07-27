@@ -18,6 +18,7 @@ struct VaultSectionView: View {
     #endif
     @State private var vaultEnabled: Bool = false
     @State private var iCloudMirroring: Bool = VaultManager.shared.isICloudMirroring
+    @State private var showAllMonths: Bool = false
 
     private var isVaultEmpty: Bool {
         (index?.months.isEmpty ?? true)
@@ -49,7 +50,7 @@ struct VaultSectionView: View {
                 }
 
             if let months = index?.sortedMonths, !months.isEmpty {
-                monthsList(months: months)
+                monthsSummary(months: months)
             } else {
                 emptyState
             }
@@ -88,9 +89,49 @@ struct VaultSectionView: View {
                 Task { await refresh() }
             }
         }
+        .task {
+            loadState()
+        }
     }
 
     // MARK: - Subviews
+
+    private func monthsSummary(months: [String]) -> some View {
+        let totalWorkouts = index?.months.values.reduce(0) { $0 + $1.workoutCount } ?? 0
+        let totalBytes = index?.months.values.reduce(0) { $0 + $1.byteSize } ?? 0
+        let latest = months.last.map(formatYearMonth)
+
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(String(format: "vault.summary.months".localized(), months.count))
+                        .font(.subheadline)
+                    Text(String(format: "vault.summary.workouts".localized(), totalWorkouts, formatBytes(totalBytes)))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    if let latest {
+                        Text(String(format: "vault.summary.latest".localized(), latest))
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                Spacer()
+                Button {
+                    withAnimation {
+                        showAllMonths.toggle()
+                    }
+                } label: {
+                    Text(showAllMonths ? "vault.hideAllMonths".localized() : "vault.showAllMonths".localized())
+                        .font(.caption)
+                }
+                .buttonStyle(.borderless)
+            }
+
+            if showAllMonths {
+                monthsList(months: months)
+            }
+        }
+    }
 
     private var statusRow: some View {
         HStack {

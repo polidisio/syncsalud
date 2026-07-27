@@ -109,4 +109,5 @@ struct ContentView: View {
         .modelContainer(for: [WorkoutRecord.self, WorkoutMetric.self, SyncLog.self], inMemory: true)
         .environment(HealthKitService())
         .environment(HealthSyncManager())
+        .environment(CloudSyncStatusMonitor())
 }
